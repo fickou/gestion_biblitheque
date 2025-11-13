@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'login.dart';
+import 'package:go_router/go_router.dart';
+//import '../config/routes.dart';
 
 /// Page d'accueil de l'application Bibliothèque UFR SAT
 /// Conversion fidèle du design React/Tailwind
@@ -254,34 +255,35 @@ class Home extends StatelessWidget {
   }
 
   /// Bouton de connexion
-  Widget _buildLoginButton(BuildContext context) {
-    return SizedBox(
-      width: double.infinity, // w-full
-      height: 48, // h-12
-      child: ElevatedButton(
-        onPressed: () {
-          // Navigation vers la page de connexion
-          Navigator.pushNamed(context, '/login');
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Color.fromARGB(255, 44, 80, 164), // primary
-          foregroundColor: Colors.white,
-          elevation: 2,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(6),
-          ),
-          padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+ Widget _buildLoginButton(BuildContext context) {
+  return SizedBox(
+    width: double.infinity,
+    height: 48,
+    child: ElevatedButton(
+      onPressed: () {
+        // Utilisation de GoRouter
+        context.go('/login'); // Remplace Navigator.pushNamed
+      },
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Color.fromARGB(255, 44, 80, 164), 
+        foregroundColor: Colors.white,
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(6),
         ),
-        child: Text(
-          'Connexion',
-          style: TextStyle(
-            fontSize: 18, // text-lg
-            fontWeight: FontWeight.w600, // font-semibold
-          ),
+        padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      ),
+      child: Text(
+        'Connexion',
+        style: TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
         ),
       ),
-    );
-  }
+    ),
+  );
+}
+
 
   /// Footer avec copyright (mt-8 text-white/80 text-sm)
   Widget _buildFooter() {

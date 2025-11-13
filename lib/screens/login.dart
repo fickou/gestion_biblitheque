@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 class Login extends StatefulWidget {
   const Login({Key? key}) : super(key: key);
@@ -12,6 +13,7 @@ class _LoginState extends State<Login> {
   final TextEditingController _passwordController = TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   bool _obscurePassword = true;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -22,6 +24,10 @@ class _LoginState extends State<Login> {
 
   void _handleLogin() {
     if (_emailController.text.isNotEmpty && _passwordController.text.isNotEmpty) {
+      setState(() {
+        _isLoading = true;
+      });
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
@@ -37,7 +43,12 @@ class _LoginState extends State<Login> {
           duration: Duration(seconds: 2),
         ),
       );
-      Navigator.pushNamed(context, '/');
+
+      // Redirection après un petit délai pour que le SnackBar soit visible
+      Future.delayed(Duration(seconds: 1), () {
+        context.go('/dashboard'); // ✅ Corrigé : '/dashboard' au lieu de '/dashbord'
+      });
+
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -62,24 +73,44 @@ class _LoginState extends State<Login> {
     return Scaffold(
       backgroundColor: Color.fromARGB(255, 44, 80, 164),
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: EdgeInsets.all(16),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: 448),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _buildHeader(),
-                  SizedBox(height: 32),
-                  _buildLoginCard(),
-                  SizedBox(height: 32),
-                  _buildFooter(),
-                ],
+        child: Stack(
+          children: [
+            // Contenu principal
+            Center(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.symmetric(horizontal: 16),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: 448),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _buildBackButton(context),
+                      SizedBox(height: 16),
+                      _buildHeader(),
+                      SizedBox(height: 32),
+                      _buildLoginCard(),
+                    ],
+                  ),
+                ),
               ),
             ),
-          ),
+            // Footer
+            _buildFooterStack(),
+          ],
         ),
+      ),
+    );
+  }
+
+  // Bouton retour en haut
+  Widget _buildBackButton(BuildContext context) {
+    return Align(
+      alignment: Alignment.topLeft,
+      child: IconButton(
+        icon: Icon(Icons.arrow_back, color: Colors.white, size: 28),
+        onPressed: () {
+          context.go('/home'); // Retour à l'écran précédent
+        },
       ),
     );
   }
@@ -101,6 +132,13 @@ class _LoginState extends State<Login> {
                 width: 80,
                 height: 80,
                 fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Icon(
+                    Icons.menu_book,
+                    size: 40,
+                    color: Colors.white,
+                  );
+                },
               ),
             ),
           ),
@@ -278,7 +316,7 @@ class _LoginState extends State<Login> {
       width: double.infinity,
       height: 48,
       child: ElevatedButton(
-        onPressed: _handleLogin,
+        onPressed: _isLoading ? null : _handleLogin, // ✅ Corrigé : fonction passée directement
         style: ElevatedButton.styleFrom(
           backgroundColor: Color.fromARGB(255, 44, 80, 164),
           foregroundColor: Colors.white,
@@ -286,15 +324,23 @@ class _LoginState extends State<Login> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(6),
           ),
-          padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         ),
-        child: Text(
-          'Se connecter',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+        child: _isLoading
+            ? SizedBox(
+                height: 20,
+                width: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              )
+            : Text(
+                'Se connecter',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
       ),
     );
   }
@@ -303,13 +349,20 @@ class _LoginState extends State<Login> {
     return Column(
       children: [
         InkWell(
-          onTap: () {},
+          onTap: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Fonctionnalité à implémenter'),
+                duration: Duration(seconds: 2),
+              ),
+            );
+          },
           child: Text(
             'Mot de passe oublié ?',
             style: TextStyle(
               fontSize: 14,
               color: Color.fromARGB(255, 44, 80, 164),
-              decoration: TextDecoration.none,
+              fontWeight: FontWeight.w500,
             ),
           ),
         ),
@@ -325,13 +378,20 @@ class _LoginState extends State<Login> {
               ),
             ),
             InkWell(
-              onTap: () {},
+              onTap: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Création de compte à implémenter'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+              },
               child: Text(
                 'Créer un compte',
                 style: TextStyle(
                   fontSize: 14,
                   color: Color.fromARGB(255, 44, 80, 164),
-                  decoration: TextDecoration.none,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             ),
@@ -341,21 +401,20 @@ class _LoginState extends State<Login> {
     );
   }
 
-  Widget _buildFooter() {
+  Widget _buildFooterStack() {
     return Positioned(
       bottom: 0,
       left: 0,
       right: 0,
       child: SafeArea(
-        child: Align(
-          alignment: Alignment.bottomCenter,
+        child: Center(
           child: Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: Text(
               '© UFR SAT 2025',
               style: TextStyle(
-                fontSize: 14, // text-sm
-                color: Colors.white.withOpacity(0.8), // text-white/80
+                fontSize: 14,
+                color: Colors.white.withOpacity(0.8),
               ),
             ),
           ),

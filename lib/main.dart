@@ -1,26 +1,30 @@
-// Importation du package principal de Flutter pour les widgets Material Design.
+// Fichier : lib/main.dart
+
 import 'package:flutter/material.dart';
-import 'screens/home.dart';
-import 'screens/login.dart';
-import 'screens/dashbord.dart';
-import 'screens/catalogue.dart';
-// La fonction main() est le point d'entrée de toute application Dart/Flutter.
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'config/routes.dart';
+
 void main() {
-  // runApp() prend un widget et en fait la racine de l'arbre des widgets.
-  runApp(const MyApp());
+  runApp(
+    const ProviderScope(
+      child: MyApp(),
+    ),
+  );
 }
-// MyApp est le widget racine de notre application.
-class MyApp extends StatelessWidget {
+
+class MyApp extends ConsumerWidget {
   const MyApp({super.key});
-// La méthode build() décrit comment afficher le widget.
+
   @override
-  Widget build(BuildContext context) {
-    // MaterialApp est un widget de base qui configure notre application
-    // avec les fonctionnalités de Material Design.
-    return MaterialApp(
+  Widget build(BuildContext context, WidgetRef ref) {
+    // On lit notre routerProvider pour obtenir GoRouter
+    final router = ref.watch(routerProvider);
+
+    return MaterialApp.router(
+      routerConfig: router,
       debugShowCheckedModeBanner: false,
-      // 'home' définit le premier écran qui sera affiché.
-      home: DashboardPage(),
+      theme: ThemeData(primarySwatch: Colors.indigo),
     );
   }
 }
