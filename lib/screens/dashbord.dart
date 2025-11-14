@@ -13,7 +13,6 @@ class DashboardPage extends StatefulWidget {
 class _DashboardPageState extends State<DashboardPage> {
   // ignore: unused_field
   String _searchQuery = '';
-  int _currentIndex = 0;
 
   final List<Book> newBooks = Book.newBooks;
   final List<Book> popularBooks = Book.popularBooks;
@@ -46,7 +45,8 @@ class _DashboardPageState extends State<DashboardPage> {
   ];
 
   void _handleBookClick(String id) {
-    Navigator.pushNamed(context, '/livre/$id');
+    // Utilisation de GoRouter
+    context.go('/livre/$id');
   }
 
   @override
@@ -58,7 +58,6 @@ class _DashboardPageState extends State<DashboardPage> {
           children: [
             _buildAppHeader(),
             Expanded(
-              // ✅ Ajouté pour que tout le contenu prenne la place dispo
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
                 child: Padding(
@@ -76,7 +75,7 @@ class _DashboardPageState extends State<DashboardPage> {
                         _buildPopularBooksSection(),
                         const SizedBox(height: 24),
                         _buildWelcomeCard(),
-                        const SizedBox(height: 24), // ✅ ajouté pour respirer
+                        const SizedBox(height: 24),
                       ],
                     ),
                   ),
@@ -147,7 +146,7 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  /// ⚡ Section Actions rapides
+  /// ⚡ Section Actions rapides - CORRIGÉE
   Widget _buildQuickActionsSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -182,7 +181,8 @@ class _DashboardPageState extends State<DashboardPage> {
 
   Widget _buildQuickActionCard(QuickAction action) {
     return InkWell(
-      onTap: () => Navigator.pushNamed(context, action.route),
+      // CORRECTION: Utilisation de context.go() au lieu de Navigator.pushNamed
+      onTap: () => context.go(action.route),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -246,7 +246,7 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  /// 🧩 En-tête de section
+  /// 🧩 En-tête de section - CORRIGÉ
   Widget _buildSectionHeader(String title) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -260,7 +260,8 @@ class _DashboardPageState extends State<DashboardPage> {
           ),
         ),
         InkWell(
-          onTap: () => Navigator.pushNamed(context, '/catalogue'),
+          // CORRECTION: Utilisation de context.go()
+          onTap: () => context.go('/catalogue'),
           child: const Text(
             'Voir tout',
             style: TextStyle(
@@ -285,98 +286,98 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  /// 📚 Carte de livre: /// 📚 Carte de livre - Version alternative
-Widget _buildBookCard(Book book) {
-  return InkWell(
-    onTap: () => _handleBookClick(book.id),
-    child: Container(
-      width: 140,
-      height: 230, // ✅ Hauteur fixe
-      margin: const EdgeInsets.only(right: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // Image/icone du livre
-          Container(
-            height: 120, // ✅ Hauteur fixe pour l'image
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: const Color.fromARGB(255, 44, 80, 164).withOpacity(0.1),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(8),
-                topRight: Radius.circular(8),
+  /// 📚 Carte de livre
+  Widget _buildBookCard(Book book) {
+    return InkWell(
+      onTap: () => _handleBookClick(book.id),
+      child: Container(
+        width: 140,
+        height: 230,
+        margin: const EdgeInsets.only(right: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            // Image/icone du livre
+            Container(
+              height: 120,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: const Color.fromARGB(255, 44, 80, 164).withOpacity(0.1),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(8),
+                  topRight: Radius.circular(8),
+                ),
+              ),
+              child: const Center(
+                child: Icon(Icons.menu_book,
+                    size: 48,
+                    color: Color.fromARGB(255, 44, 80, 164)),
               ),
             ),
-            child: const Center(
-              child: Icon(Icons.menu_book,
-                  size: 48,
-                  color: Color.fromARGB(255, 44, 80, 164)),
-            ),
-          ),
-          // Contenu texte
-          Expanded( // ✅ Prend tout l'espace restant
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    book.title,
-                    style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF0F172A)),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    book.author,
-                    style: const TextStyle(
-                        fontSize: 12, color: Color(0xFF64748B)),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const Spacer(), // ✅ Pousse le badge vers le bas
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: book.available
-                          ? const Color(0xFF10B981).withOpacity(0.1)
-                          : const Color(0xFFEF4444).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(4),
+            // Contenu texte
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      book.title,
+                      style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF0F172A)),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    child: Text(
-                      book.available ? 'Disponible' : 'Indisponible',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w500,
+                    const SizedBox(height: 4),
+                    Text(
+                      book.author,
+                      style: const TextStyle(
+                          fontSize: 12, color: Color(0xFF64748B)),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
                         color: book.available
-                            ? const Color(0xFF10B981)
-                            : const Color(0xFFEF4444),
+                            ? const Color(0xFF10B981).withOpacity(0.1)
+                            : const Color(0xFFEF4444).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        book.available ? 'Disponible' : 'Indisponible',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                          color: book.available
+                              ? const Color(0xFF10B981)
+                              : const Color(0xFFEF4444),
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   /// 🎉 Carte de bienvenue
   Widget _buildWelcomeCard() {
@@ -423,21 +424,8 @@ Widget _buildBookCard(Book book) {
   /// 🧭 Barre de navigation inférieure
   Widget _buildBottomNav() {
     return BottomNavigationBar(
-      currentIndex: _currentIndex,
-      onTap: (index) {
-        setState(() => _currentIndex = index);
-        switch (index) {
-          case 1:
-            context.go('/catalogue');
-            break;
-          case 2:
-            context.go('/emprunts');
-            break;
-          case 3:
-            context.go('/profil');
-            break;
-        }
-      },
+      currentIndex: _getCurrentIndex(context),
+      onTap: (index) => _onItemTapped(index, context),
       type: BottomNavigationBarType.fixed,
       selectedItemColor: const Color.fromARGB(255, 44, 80, 164),
       unselectedItemColor: const Color(0xFF64748B),
@@ -464,5 +452,33 @@ Widget _buildBookCard(Book book) {
         ),
       ],
     );
+  }
+
+  // Méthode pour déterminer l'index actuel
+  int _getCurrentIndex(BuildContext context) {
+    final location = GoRouterState.of(context).matchedLocation;
+    if (location == '/home') return 0;
+    if (location == '/catalogue') return 1;
+    if (location == '/emprunts') return 2;
+    if (location == '/profil') return 3;
+    return 0;
+  }
+
+  // Navigation pour la bottom bar
+  void _onItemTapped(int index, BuildContext context) {
+    switch (index) {
+      case 0:
+        context.go('/home');
+        break;
+      case 1:
+        context.go('/catalogue');
+        break;
+      case 2:
+        context.go('/emprunts');
+        break;
+      case 3:
+        context.go('/profil');
+        break;
+    }
   }
 }

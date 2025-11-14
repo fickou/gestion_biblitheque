@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../models/user.dart';
 
 class ProfilePage extends StatelessWidget {
@@ -8,8 +9,8 @@ class ProfilePage extends StatelessWidget {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text("Déconnexion réussie")),
     );
-    // Ici tu peux naviguer vers la page login
-    Navigator.pushReplacementNamed(context, '/login');
+    // Utilisation de GoRouter pour la navigation
+    context.go('/login');
   }
 
   @override
@@ -32,37 +33,36 @@ class ProfilePage extends StatelessWidget {
         child: Column(
           children: [
             // --- Avatar + nom + rôle ---
-           // --- Avatar + nom + rôle ---
-        Column(
-          children: [
-            CircleAvatar(
-              radius: 40,
-              backgroundColor: const Color(0xFF2C50A4),
-              child: Text(
-                user.avatarText,
-                style: const TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+            Column(
+              children: [
+                CircleAvatar(
+                  radius: 40,
+                  backgroundColor: const Color(0xFF2C50A4),
+                  child: Text(
+                    user.avatarText,
+                    style: const TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
-              ),
+                const SizedBox(height: 12),
+                Text(
+                  user.name,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  user.role,
+                  style: const TextStyle(
+                    color: Colors.grey,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
-            Text(
-              user.name,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            Text(
-              user.role,
-              style: const TextStyle(
-                color: Colors.grey,
-              ),
-            ),
-          ],
-        ),
 
             const SizedBox(height: 16),
 
@@ -111,9 +111,10 @@ class ProfilePage extends StatelessWidget {
 
       // ----- Bottom Navigation -----
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 3,
+        currentIndex: _getCurrentIndex(context),
         selectedItemColor: const Color(0xFF2C50A4),
         unselectedItemColor: Colors.grey,
+        onTap: (index) => _onItemTapped(index, context),
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: "Accueil"),
           BottomNavigationBarItem(icon: Icon(Icons.menu_book), label: "Catalogue"),
@@ -122,6 +123,34 @@ class ProfilePage extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  // Méthode pour déterminer l'index actuel
+  int _getCurrentIndex(BuildContext context) {
+    final location = GoRouterState.of(context).matchedLocation;
+    if (location == '/home') return 0;
+    if (location == '/catalogue') return 1;
+    if (location == '/emprunts') return 2;
+    if (location == '/profil') return 3;
+    return 0;
+  }
+
+  // Navigation pour la bottom bar
+  void _onItemTapped(int index, BuildContext context) {
+    switch (index) {
+      case 0:
+        context.go('/home');
+        break;
+      case 1:
+        context.go('/catalogue');
+        break;
+      case 2:
+        context.go('/emprunts');
+        break;
+      case 3:
+        context.go('/profil');
+        break;
+    }
   }
 
   // Méthode utilitaire pour afficher les lignes d'info
