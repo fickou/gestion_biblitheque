@@ -10,6 +10,9 @@ import '../screens/dashbord.dart';
 import '../screens/home.dart';
 import '../screens/login.dart';
 
+import '../screens/emprunts.dart';
+import '../screens/livreid.dart';
+
 // Router Provider
 final routerProvider = Provider<GoRouter>((ref) {
   // On écoute l'état de l'authentification
@@ -56,6 +59,20 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/dashboard',
         name: 'dashboard',
         builder: (context, state) => const DashboardPage(),
+      ),
+
+      GoRoute(
+        path: '/emprunts',
+        name: 'emprunts',
+        builder: (context, state) => const EmpruntsPage(),
+      ),
+      GoRoute(
+        path: '/livre/:id',
+        name: 'livre',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return LivreDetailPage(id: id);
+        },
       ),
     ],
   );
