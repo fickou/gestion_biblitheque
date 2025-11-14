@@ -9,6 +9,9 @@ import '../screens/catalogue.dart';
 import '../screens/dashbord.dart';
 import '../screens/home.dart';
 import '../screens/login.dart';
+import '../screens/profil.dart';
+import '../screens/reservation.dart';
+
 
 // Router Provider
 final routerProvider = Provider<GoRouter>((ref) {
@@ -56,6 +59,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/dashboard',
         name: 'dashboard',
         builder: (context, state) => const DashboardPage(),
+      ),
+      GoRoute(
+        path: '/profil',
+        name: 'profil',
+        builder: (context, state) => const ProfilePage(),
+      ),
+      GoRoute(
+        path: '/reservations',
+        name: 'reservations',
+        builder: (context, state) => const ReservationsPage(),
       ),
     ],
   );
