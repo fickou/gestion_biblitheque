@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../models/book.dart';
 import '../models/quick_action.dart';
 
@@ -425,14 +426,17 @@ Widget _buildBookCard(Book book) {
       onTap: (index) {
         setState(() => _currentIndex = index);
         switch (index) {
+          case 0:
+            context.go('/dashboard');
+            break;
           case 1:
-            Navigator.pushNamed(context, '/catalogue');
+            context.go('/catalogue');
             break;
           case 2:
-            Navigator.pushNamed(context, '/emprunts');
+            context.go('/emprunts');
             break;
           case 3:
-            Navigator.pushNamed(context, '/profil');
+            context.go('/profil');
             break;
         }
       },

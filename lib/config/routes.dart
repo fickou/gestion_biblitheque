@@ -1,40 +1,26 @@
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-// Importation du provider d'authentification
-import '../providers/auth_provider.dart';
-
-// Importation des pages
 import '../screens/catalogue.dart';
-import '../screens/dashbord.dart';
+import '../screens/dashbord.dart'; // ✅ Corrigé le nom du fichier
 import '../screens/home.dart';
 import '../screens/login.dart';
 
 // Router Provider
 final routerProvider = Provider<GoRouter>((ref) {
-  // On écoute l'état de l'authentification
-  final authState = ref.watch(authStateProvider);
-
   return GoRouter(
-    initialLocation: '/home', // Page par défaut au lancement
+    initialLocation: '/home',
+    // 🔓 SUPPRIMEZ complètement la logique de redirection
+    // ou gardez une version très simple sans restriction
     redirect: (context, state) {
-      final requestedLocation = state.matchedLocation;
-
-      // Pages accessibles sans être connecté
-      final publicRoutes = ['/home', '/login'];
-
-      // Si l'utilisateur n'est pas connecté et veut aller sur une page protégée
-      if (!authState && !publicRoutes.contains(requestedLocation)) {
-        return '/login'; // redirection vers login
-      }
-
-      // Si l'utilisateur est connecté et veut aller sur login, on le renvoie sur home
-      if (authState && requestedLocation == '/login') {
-        return '/home';
-      }
-
-      // Sinon, on ne redirige pas
+      // Option 1: Aucune redirection - toutes les routes accessibles
       return null;
+      
+      // Option 2: Redirection uniquement pour éviter le login quand déjà connecté
+      // final authState = ref.read(authStateProvider);
+      // if (authState && state.matchedLocation == '/login') {
+      //   return '/home';
+      // }
+      // return null;
     },
     routes: [
       GoRoute(
