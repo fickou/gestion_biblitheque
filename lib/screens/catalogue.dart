@@ -11,6 +11,7 @@ class CataloguePage extends StatefulWidget {
 }
 
 class _CataloguePageState extends State<CataloguePage> {
+  // ignore: unused_field
   String _searchQuery = '';
   List<Book> _filteredBooks = Book.catalogueBooks;
 
