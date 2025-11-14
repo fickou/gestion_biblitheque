@@ -180,11 +180,17 @@ class Book {
 
   // Méthode utilitaire pour récupérer un livre par son ID
   static Book? getBookById(String id) {
-    final allBooks = [...catalogueBooks, ...emprunts, ...reservations];
+    // Chercher d'abord dans newBooks et popularBooks qui ont les descriptions
+    final allBooksWithDescription = [...newBooks, ...popularBooks, ...emprunts, ...reservations];
     try {
-      return allBooks.firstWhere((book) => book.id == id);
+      return allBooksWithDescription.firstWhere((book) => book.id == id);
     } catch (e) {
-      return null;
+      // Si pas trouvé, chercher dans catalogueBooks
+      try {
+        return catalogueBooks.firstWhere((book) => book.id == id);
+      } catch (e) {
+        return null;
+      }
     }
   }
 }
