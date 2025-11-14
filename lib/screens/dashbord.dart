@@ -426,9 +426,6 @@ Widget _buildBookCard(Book book) {
       onTap: (index) {
         setState(() => _currentIndex = index);
         switch (index) {
-          case 0:
-            context.go('/dashboard');
-            break;
           case 1:
             context.go('/catalogue');
             break;
