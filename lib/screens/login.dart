@@ -25,28 +25,52 @@ class _LoginState extends ConsumerState<Login> {
     super.dispose();
   }
 
-  Future<void> _handleLogin(BuildContext context) async {
+  Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
 
-    await Future.delayed(const Duration(seconds: 1));
+    try {
+      // Simulation d'appel API
+      await Future.delayed(const Duration(seconds: 1));
 
-    setState(() => _isLoading = false);
+      // Logique d'authentification réelle ici
+      final email = _emailController.text.trim();
+      final password = _passwordController.text;
 
-    // 🔵 Mise à jour de l'état d'authentification
-    ref.read(authStateProvider.notifier).state = true;
+      if (email.isNotEmpty && password.isNotEmpty) {
+        ref.read(authStateProvider.notifier).state = true;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Connexion réussie")),
-    );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text("Connexion réussie"),
+              backgroundColor: Colors.green.shade600,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
 
-    // 🔵 Redirection
-    Future.microtask(() {
-      GoRouter.of(context).go('/dashboard');
-    });
+          context.go('/dashboard');
+        }
+      } else {
+        throw Exception('Identifiants incorrects');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString()),
+            backgroundColor: Colors.red.shade600,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -73,16 +97,12 @@ class _LoginState extends ConsumerState<Login> {
                 ),
               ),
             ),
-            _buildFooterStack(),
+            _buildFooter(),
           ],
         ),
       ),
     );
   }
-
-  /// ============================
-  /// WIDGETS UI
-  /// ============================
 
   Widget _buildBackButton(BuildContext context) {
     return Align(
@@ -110,8 +130,11 @@ class _LoginState extends ConsumerState<Login> {
               width: 80,
               height: 80,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) =>
-                  const Icon(Icons.menu_book, size: 40, color: Colors.white),
+              errorBuilder: (_, __, ___) => const Icon(
+                Icons.menu_book, 
+                size: 40, 
+                color: Colors.white
+              ),
             ),
           ),
         ),
@@ -157,7 +180,7 @@ class _LoginState extends ConsumerState<Login> {
             _buildEmailField(),
             const SizedBox(height: 16),
             _buildPasswordField(),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
             _buildLoginButton(),
             const SizedBox(height: 24),
             _buildLinks(),
@@ -168,45 +191,56 @@ class _LoginState extends ConsumerState<Login> {
   }
 
   Widget _buildEmailField() {
-    return TextFormField(
-      controller: _emailController,
-      keyboardType: TextInputType.emailAddress,
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return 'Veuillez entrer votre email';
-        }
-        if (!value.contains('@')) {
-          return 'Email invalide';
-        }
-        return null;
-      },
-      decoration: _inputDecoration('votre.email@univ.edu'),
+    return Semantics(
+      label: 'Champ email',
+      textField: true,
+      child: TextFormField(
+        controller: _emailController,
+        keyboardType: TextInputType.emailAddress,
+        textInputAction: TextInputAction.next,
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return 'Veuillez entrer votre email';
+          }
+          if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
+            return 'Format d\'email invalide';
+          }
+          return null;
+        },
+        decoration: _inputDecoration('votre.email@univ.edu'),
+      ),
     );
   }
 
   Widget _buildPasswordField() {
-    return TextFormField(
-      controller: _passwordController,
-      obscureText: _obscurePassword,
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return 'Veuillez entrer votre mot de passe';
-        }
-        if (value.length < 6) {
-          return 'Le mot de passe doit contenir au moins 6 caractères';
-        }
-        return null;
-      },
-      decoration: _inputDecoration('••••••••').copyWith(
-        suffixIcon: IconButton(
-          icon: Icon(
-            _obscurePassword ? Icons.visibility_off : Icons.visibility,
-            color: const Color(0xFF64748B),
-            size: 20,
+    return Semantics(
+      label: 'Champ mot de passe',
+      textField: true,
+      child: TextFormField(
+        controller: _passwordController,
+        obscureText: _obscurePassword,
+        textInputAction: TextInputAction.done,
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return 'Veuillez entrer votre mot de passe';
+          }
+          if (value.length < 6) {
+            return 'Le mot de passe doit contenir au moins 6 caractères';
+          }
+          return null;
+        },
+        onFieldSubmitted: (_) => _handleLogin(),
+        decoration: _inputDecoration('••••••••').copyWith(
+          suffixIcon: IconButton(
+            icon: Icon(
+              _obscurePassword ? Icons.visibility_off : Icons.visibility,
+              color: const Color(0xFF64748B),
+              size: 20,
+            ),
+            onPressed: () {
+              setState(() => _obscurePassword = !_obscurePassword);
+            },
           ),
-          onPressed: () {
-            setState(() => _obscurePassword = !_obscurePassword);
-          },
         ),
       ),
     );
@@ -233,6 +267,10 @@ class _LoginState extends ConsumerState<Login> {
           width: 2,
         ),
       ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(6),
+        borderSide: const BorderSide(color: Colors.red),
+      ),
     );
   }
 
@@ -241,18 +279,31 @@ class _LoginState extends ConsumerState<Login> {
       height: 48,
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: _isLoading ? null : () => _handleLogin(context),
+        onPressed: _isLoading ? null : _handleLogin,
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color.fromARGB(255, 44, 80, 164),
           foregroundColor: Colors.white,
-          elevation: 2,
+          elevation: _isLoading ? 0 : 2,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
         ),
         child: _isLoading
-            ? const SizedBox(
-                height: 22,
-                width: 22,
-                child: CircularProgressIndicator(strokeWidth: 2),
+            ? const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  Text(
+                    'Connexion...',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                ],
               )
             : const Text(
                 'Se connecter',
@@ -266,16 +317,23 @@ class _LoginState extends ConsumerState<Login> {
     return Column(
       children: [
         InkWell(
-          onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Fonction à implémenter')),
-            );
-          },
-          child: const Text(
+          onTap: _isLoading
+              ? null
+              : () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Fonction à implémenter'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                },
+          child: Text(
             'Mot de passe oublié ?',
             style: TextStyle(
               fontSize: 14,
-              color: Color.fromARGB(255, 44, 80, 164),
+              color: _isLoading
+                  ? Colors.grey
+                  : const Color.fromARGB(255, 44, 80, 164),
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -289,17 +347,23 @@ class _LoginState extends ConsumerState<Login> {
               style: TextStyle(fontSize: 14, color: Color(0xFF64748B)),
             ),
             InkWell(
-              onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content: Text('Création de compte non disponible')),
-                );
-              },
-              child: const Text(
+              onTap: _isLoading
+                  ? null
+                  : () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Création de compte non disponible'),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    },
+              child: Text(
                 'Créer un compte',
                 style: TextStyle(
                   fontSize: 14,
-                  color: Color.fromARGB(255, 44, 80, 164),
+                  color: _isLoading
+                      ? Colors.grey
+                      : const Color.fromARGB(255, 44, 80, 164),
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -310,7 +374,7 @@ class _LoginState extends ConsumerState<Login> {
     );
   }
 
-  Widget _buildFooterStack() {
+  Widget _buildFooter() {
     return Positioned(
       bottom: 0,
       left: 0,

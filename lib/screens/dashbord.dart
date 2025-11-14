@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../models/book.dart';
 import '../models/quick_action.dart';
 
@@ -10,6 +11,7 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
+  // ignore: unused_field
   String _searchQuery = '';
   int _currentIndex = 0;
 
@@ -426,13 +428,13 @@ Widget _buildBookCard(Book book) {
         setState(() => _currentIndex = index);
         switch (index) {
           case 1:
-            Navigator.pushNamed(context, '/catalogue');
+            context.go('/catalogue');
             break;
           case 2:
-            Navigator.pushNamed(context, '/emprunts');
+            context.go('/emprunts');
             break;
           case 3:
-            Navigator.pushNamed(context, '/profil');
+            context.go('/profil');
             break;
         }
       },

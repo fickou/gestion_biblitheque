@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../models/book.dart';
 import '../components/book_card.dart';
 
@@ -10,6 +11,7 @@ class CataloguePage extends StatefulWidget {
 }
 
 class _CataloguePageState extends State<CataloguePage> {
+  // ignore: unused_field
   String _searchQuery = '';
   List<Book> _filteredBooks = Book.catalogueBooks;
 
@@ -29,7 +31,7 @@ class _CataloguePageState extends State<CataloguePage> {
   }
 
   void _handleBookClick(String bookId) {
-    Navigator.pushNamed(context, '/livre/$bookId');
+    context.go('/livre/$bookId');
   }
 
   void _showFilters() {
@@ -274,16 +276,16 @@ class _CataloguePageState extends State<CataloguePage> {
         onTap: (index) {
           switch (index) {
             case 0:
-              Navigator.popUntil(context, (route) => route.isFirst);
+              context.go('/dashboard');
               break;
             case 1:
               // Déjà sur le catalogue
               break;
             case 2:
-              Navigator.pushNamed(context, '/emprunts');
+              context.go('/emprunts');
               break;
             case 3:
-              Navigator.pushNamed(context, '/profil');
+              context.go('/profil');
               break;
           }
         },
