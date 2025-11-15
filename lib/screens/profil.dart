@@ -112,14 +112,31 @@ class ProfilePage extends StatelessWidget {
       // ----- Bottom Navigation -----
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _getCurrentIndex(context),
-        selectedItemColor: const Color(0xFF2C50A4),
-        unselectedItemColor: Colors.grey,
         onTap: (index) => _onItemTapped(index, context),
+        type: BottomNavigationBarType.fixed,
+        selectedItemColor: const Color.fromARGB(255, 44, 80, 164),
+        unselectedItemColor: const Color(0xFF64748B),
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: "Accueil"),
-          BottomNavigationBarItem(icon: Icon(Icons.menu_book), label: "Catalogue"),
-          BottomNavigationBarItem(icon: Icon(Icons.description_outlined), label: "Emprunts"),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: "Profil"),
+          BottomNavigationBarItem(
+          icon: Icon(Icons.home_outlined),
+          activeIcon: Icon(Icons.home),
+          label: 'Accueil',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.search_outlined),
+          activeIcon: Icon(Icons.search),
+          label: 'Catalogue',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.description_outlined),
+          activeIcon: Icon(Icons.description),
+          label: 'Emprunts',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.person_outline),
+          activeIcon: Icon(Icons.person),
+          label: 'Profil',
+        ),
         ],
       ),
     );
@@ -128,7 +145,7 @@ class ProfilePage extends StatelessWidget {
   // Méthode pour déterminer l'index actuel
   int _getCurrentIndex(BuildContext context) {
     final location = GoRouterState.of(context).matchedLocation;
-    if (location == '/home') return 0;
+    if (location == '/dashboard') return 0;
     if (location == '/catalogue') return 1;
     if (location == '/emprunts') return 2;
     if (location == '/profil') return 3;
@@ -139,7 +156,7 @@ class ProfilePage extends StatelessWidget {
   void _onItemTapped(int index, BuildContext context) {
     switch (index) {
       case 0:
-        context.go('/home');
+        context.go('/dashboard');
         break;
       case 1:
         context.go('/catalogue');

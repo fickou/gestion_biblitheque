@@ -457,7 +457,7 @@ class _DashboardPageState extends State<DashboardPage> {
   // Méthode pour déterminer l'index actuel
   int _getCurrentIndex(BuildContext context) {
     final location = GoRouterState.of(context).matchedLocation;
-    if (location == '/home') return 0;
+    if (location == '/dashboard') return 0;
     if (location == '/catalogue') return 1;
     if (location == '/emprunts') return 2;
     if (location == '/profil') return 3;
@@ -468,7 +468,7 @@ class _DashboardPageState extends State<DashboardPage> {
   void _onItemTapped(int index, BuildContext context) {
     switch (index) {
       case 0:
-        context.go('/home');
+        context.go('/dashboard');
         break;
       case 1:
         context.go('/catalogue');
