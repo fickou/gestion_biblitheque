@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/book.dart';
+import 'package:go_router/go_router.dart';
 
 class LivreDetailPage extends StatelessWidget {
   final String id;
@@ -31,6 +32,72 @@ class LivreDetailPage extends StatelessWidget {
       );
     }
 
+    // ───────────────────────────────
+    // FOOTER / BOTTOM NAVIGATION
+    // ───────────────────────────────
+    Widget _buildBottomNav() {
+      return Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 8,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: BottomNavigationBar(
+          currentIndex: 1, // Catalogue actif
+          onTap: (index) {
+            switch (index) {
+              case 0:
+                context.go('/dashboard');
+                break;
+              case 1:
+                context.go('/catalogue');
+                break;
+              case 2:
+                context.go('/emprunts');
+                break;
+              case 3:
+                context.go('/profil');
+                break;
+            }
+          },
+          type: BottomNavigationBarType.fixed,
+          backgroundColor: Colors.white,
+          selectedItemColor: const Color.fromARGB(255, 44, 80, 164),
+          unselectedItemColor: const Color(0xFF64748B),
+          selectedFontSize: 12,
+          unselectedFontSize: 12,
+          elevation: 0,
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.home_outlined),
+              activeIcon: Icon(Icons.home),
+              label: 'Accueil',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.search_outlined),
+              activeIcon: Icon(Icons.search),
+              label: 'Catalogue',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.description_outlined),
+              activeIcon: Icon(Icons.description),
+              label: 'Emprunts',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline),
+              activeIcon: Icon(Icons.person),
+              label: 'Profil',
+            ),
+          ],
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
 
@@ -41,28 +108,21 @@ class LivreDetailPage extends StatelessWidget {
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => context.go('/catalogue'),
         ),
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Image.asset('assets/images/ufr.png', height: 36),
-            const SizedBox(width: 8),
-            const Text(
-              'Détails du livre',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 20,
-                color: Colors.white,
-              ),
-            ),
-          ],
+        title: const Text(
+          'Détails du livre',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+            color: Colors.white,
+          ),
         ),
         actions: [
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert, color: Colors.white),
             onSelected: (value) {
-              if (value == 'accueil') Navigator.pushNamed(context, '/home');
+              if (value == 'accueil') context.go('/dashboard');
               if (value == 'parametres') {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Ouverture des paramètres...')),
@@ -70,8 +130,8 @@ class LivreDetailPage extends StatelessWidget {
               }
               if (value == 'quitter') Navigator.pop(context);
             },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
+            itemBuilder: (context) => const [
+              PopupMenuItem(
                 value: 'accueil',
                 child: Row(
                   children: [
@@ -81,7 +141,7 @@ class LivreDetailPage extends StatelessWidget {
                   ],
                 ),
               ),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'parametres',
                 child: Row(
                   children: [
@@ -91,7 +151,7 @@ class LivreDetailPage extends StatelessWidget {
                   ],
                 ),
               ),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'quitter',
                 child: Row(
                   children: [
@@ -119,11 +179,11 @@ class LivreDetailPage extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
+                  boxShadow: const [
                     BoxShadow(
                       color: Colors.black12,
                       blurRadius: 8,
-                      offset: const Offset(0, 4),
+                      offset: Offset(0, 4),
                     ),
                   ],
                 ),
@@ -141,20 +201,26 @@ class LivreDetailPage extends StatelessWidget {
                               color: const Color(0xFFE9EDF5),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: const Icon(Icons.book_outlined, size: 80, color: Colors.grey),
+                            child: const Icon(Icons.book_outlined,
+                                size: 80, color: Colors.grey),
                           ),
                           const SizedBox(height: 12),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 6),
                             decoration: BoxDecoration(
-                              color: book.available ? Colors.green : Colors.redAccent,
+                              color: book.available
+                                  ? Colors.green
+                                  : Colors.redAccent,
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Text(
                               book.available
                                   ? "Disponible (${book.copies ?? 0} exemplaires)"
                                   : "Emprunté",
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600),
                             ),
                           ),
                         ],
@@ -165,12 +231,15 @@ class LivreDetailPage extends StatelessWidget {
                     Text(
                       book.title,
                       style: const TextStyle(
-                          fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF2C50A4)),
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF2C50A4)),
                     ),
                     const SizedBox(height: 6),
                     Row(
                       children: [
-                        const Icon(Icons.person_outline, size: 18, color: Colors.grey),
+                        const Icon(Icons.person_outline,
+                            size: 18, color: Colors.grey),
                         const SizedBox(width: 6),
                         Text(book.author, style: const TextStyle(color: Colors.grey)),
                       ],
@@ -178,24 +247,29 @@ class LivreDetailPage extends StatelessWidget {
                     const SizedBox(height: 6),
                     Row(
                       children: [
-                        const Icon(Icons.calendar_month, size: 18, color: Colors.grey),
+                        const Icon(Icons.calendar_month,
+                            size: 18, color: Colors.grey),
                         const SizedBox(width: 6),
                         Text(book.year, style: const TextStyle(color: Colors.grey)),
                         const SizedBox(width: 16),
-                        const Icon(Icons.category_outlined, size: 18, color: Colors.grey),
+                        const Icon(Icons.category_outlined,
+                            size: 18, color: Colors.grey),
                         const SizedBox(width: 6),
                         Text(book.category, style: const TextStyle(color: Colors.grey)),
                       ],
                     ),
                     const SizedBox(height: 16),
                     // Résumé
-                    const Text("Résumé", style: TextStyle(fontWeight: FontWeight.w600, fontSize: 18)),
+                    const Text("Résumé",
+                        style: TextStyle(
+                            fontWeight: FontWeight.w600, fontSize: 18)),
                     const SizedBox(height: 8),
                     Text(
                       book.description != null && book.description!.isNotEmpty
                           ? book.description!
                           : "Aucun résumé disponible pour ce livre.",
-                      style: const TextStyle(fontSize: 14, height: 1.5, color: Colors.black87),
+                      style: const TextStyle(
+                          fontSize: 14, height: 1.5, color: Colors.black87),
                     ),
                   ],
                 ),
@@ -235,7 +309,8 @@ class LivreDetailPage extends StatelessWidget {
             const SizedBox(height: 32),
 
             // Livres similaires
-            const Text("Livres similaires", style: TextStyle(fontWeight: FontWeight.w600, fontSize: 18)),
+            const Text("Livres similaires",
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 18)),
             const SizedBox(height: 16),
             GridView.builder(
               shrinkWrap: true,
@@ -260,13 +335,16 @@ class LivreDetailPage extends StatelessWidget {
                             decoration: BoxDecoration(
                                 color: const Color(0xFFE9EDF5),
                                 borderRadius: BorderRadius.circular(6)),
-                            child: const Center(child: Icon(Icons.book, size: 40, color: Colors.grey)),
+                            child: const Center(
+                                child: Icon(Icons.book,
+                                    size: 40, color: Colors.grey)),
                           ),
                         ),
                         const SizedBox(height: 6),
                         Text(similarBook.title,
                             textAlign: TextAlign.center,
-                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                            style: const TextStyle(
+                                fontSize: 12, fontWeight: FontWeight.w500),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis),
                       ],
@@ -279,6 +357,9 @@ class LivreDetailPage extends StatelessWidget {
           ],
         ),
       ),
+
+      // FOOTER
+      bottomNavigationBar: _buildBottomNav(),
     );
   }
 }

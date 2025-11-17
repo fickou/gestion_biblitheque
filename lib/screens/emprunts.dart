@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../models/emprunt.dart';
 
 class EmpruntsPage extends StatelessWidget {
@@ -16,6 +17,72 @@ class EmpruntsPage extends StatelessWidget {
     );
   }
 
+  // ───────────────────────────────
+  // FOOTER / BOTTOM NAVIGATION
+  // ───────────────────────────────
+  Widget _buildBottomNav(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: Offset(0, -2),
+          ),
+        ],
+      ),
+      child: BottomNavigationBar(
+        currentIndex: 2, // Emprunts actif
+        onTap: (index) {
+          switch (index) {
+            case 0:
+              context.go('/dashboard');
+              break;
+            case 1:
+              context.go('/catalogue');
+              break;
+            case 2:
+              // Déjà sur Emprunts
+              break;
+            case 3:
+              context.go('/profil');
+              break;
+          }
+        },
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: Colors.white,
+        selectedItemColor: const Color.fromARGB(255, 44, 80, 164),
+        unselectedItemColor: const Color(0xFF64748B),
+        selectedFontSize: 12,
+        unselectedFontSize: 12,
+        elevation: 0,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_outlined),
+            activeIcon: Icon(Icons.home),
+            label: 'Accueil',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.search_outlined),
+            activeIcon: Icon(Icons.search),
+            label: 'Catalogue',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.description_outlined),
+            activeIcon: Icon(Icons.description),
+            label: 'Emprunts',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            activeIcon: Icon(Icons.person),
+            label: 'Profil',
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -26,64 +93,92 @@ class EmpruntsPage extends StatelessWidget {
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => GoRouter.of(context).go('/catalogue'),
         ),
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min, // ← Important
-          children: [
-            Image.asset('assets/images/ufr.png', height: 36),
-            const SizedBox(width: 8),
-            const Text(
-              'Mes emprunts',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 20,
-                color: Colors.white,
-              ),
-            ),
-          ],
+        title: const Text(
+          'Mes emprunts',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+            color: Colors.white,
+          ),
         ),
         actions: [
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert, color: Colors.white),
             onSelected: (value) {
-              if (value == 'accueil') Navigator.pushNamed(context, '/home');
+              if (value == 'accueil') {
+                GoRouter.of(context).go('/dashboard');
+              }
+
               if (value == 'parametres') {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Ouverture des paramètres...')),
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text("Paramètres"),
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ListTile(
+                          leading: const Icon(Icons.lock, color: Colors.blue),
+                          title: const Text("Modifier le mot de passe"),
+                          onTap: () {
+                            Navigator.pop(context);
+                            GoRouter.of(context).go('/modifier-mdp');
+                          },
+                        ),
+                        ListTile(
+                          leading: const Icon(Icons.logout, color: Colors.red),
+                          title: const Text("Se déconnecter"),
+                          onTap: () {
+                            Navigator.pop(context);
+                            GoRouter.of(context).go('/login');
+                          },
+                        ),
+                        ListTile(
+                          leading: const Icon(Icons.delete, color: Colors.orange),
+                          title: const Text("Supprimer le compte"),
+                          onTap: () {
+                            Navigator.pop(context);
+                            GoRouter.of(context).go('/supprimer-compte');
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
                 );
               }
+
               if (value == 'quitter') Navigator.pop(context);
             },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
+            itemBuilder: (context) => const [
+              PopupMenuItem(
                 value: 'accueil',
                 child: Row(
                   children: [
                     Icon(Icons.home, color: Colors.blue),
                     SizedBox(width: 10),
-                    Text('Accueil')
+                    Text('Accueil'),
                   ],
                 ),
               ),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'parametres',
                 child: Row(
                   children: [
                     Icon(Icons.settings, color: Colors.grey),
                     SizedBox(width: 10),
-                    Text('Paramètres')
+                    Text('Paramètres'),
                   ],
                 ),
               ),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'quitter',
                 child: Row(
                   children: [
                     Icon(Icons.exit_to_app, color: Colors.red),
                     SizedBox(width: 10),
-                    Text('Quitter')
+                    Text('Quitter'),
                   ],
                 ),
               ),
@@ -117,7 +212,8 @@ class EmpruntsPage extends StatelessWidget {
                                   color: const Color(0xFFE9EDF5),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                                child: const Icon(Icons.book, size: 30, color: Colors.grey),
+                                child: const Icon(Icons.book,
+                                    size: 30, color: Colors.grey),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
@@ -127,7 +223,8 @@ class EmpruntsPage extends StatelessWidget {
                                     Text(
                                       emprunt.title,
                                       style: const TextStyle(
-                                          fontWeight: FontWeight.bold, fontSize: 16),
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16),
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
                                     ),
@@ -161,19 +258,27 @@ class EmpruntsPage extends StatelessWidget {
                           const SizedBox(height: 12),
                           Row(
                             children: [
-                              const Icon(Icons.calendar_today, size: 16, color: Colors.grey),
+                              const Icon(Icons.calendar_today,
+                                  size: 16, color: Colors.grey),
                               const SizedBox(width: 6),
-                              Text("Emprunté le: ${emprunt.borrowDate}",
-                                  style: const TextStyle(color: Colors.grey)),
+                              Text(
+                                "Emprunté le: ${emprunt.borrowDate}",
+                                style: const TextStyle(
+                                    color: Colors.grey, fontSize: 14),
+                              ),
                             ],
                           ),
                           const SizedBox(height: 4),
                           Row(
                             children: [
-                              const Icon(Icons.access_time, size: 16, color: Colors.grey),
+                              const Icon(Icons.access_time,
+                                  size: 16, color: Colors.grey),
                               const SizedBox(width: 6),
-                              Text("À retourner le: ${emprunt.returnDate}",
-                                  style: const TextStyle(color: Colors.grey)),
+                              Text(
+                                "À retourner le: ${emprunt.returnDate}",
+                                style: const TextStyle(
+                                    color: Colors.grey, fontSize: 14),
+                              ),
                             ],
                           ),
                           const SizedBox(height: 12),
@@ -181,10 +286,12 @@ class EmpruntsPage extends StatelessWidget {
                             children: [
                               Expanded(
                                 child: OutlinedButton(
-                                  onPressed: () => handleExtend(context, emprunt.title),
+                                  onPressed: () =>
+                                      handleExtend(context, emprunt.title),
                                   style: OutlinedButton.styleFrom(
                                     foregroundColor: const Color(0xFF2C50A4),
-                                    side: const BorderSide(color: Color(0xFF2C50A4)),
+                                    side: const BorderSide(
+                                        color: Color(0xFF2C50A4)),
                                   ),
                                   child: const Text("Prolonger"),
                                 ),
@@ -192,7 +299,8 @@ class EmpruntsPage extends StatelessWidget {
                               const SizedBox(width: 12),
                               Expanded(
                                 child: ElevatedButton(
-                                  onPressed: () => handleReturn(context, emprunt.title),
+                                  onPressed: () =>
+                                      handleReturn(context, emprunt.title),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: const Color(0xFF2C50A4),
                                     foregroundColor: Colors.white,
@@ -208,17 +316,21 @@ class EmpruntsPage extends StatelessWidget {
                   );
                 },
               )
-            : Center(
+            : const Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: const [
+                  children: [
                     Icon(Icons.book, size: 64, color: Colors.grey),
                     SizedBox(height: 12),
-                    Text("Aucun emprunt en cours", style: TextStyle(color: Colors.grey)),
+                    Text(
+                      "Aucun emprunt en cours",
+                      style: TextStyle(color: Colors.grey),
+                    ),
                   ],
                 ),
               ),
       ),
+      bottomNavigationBar: _buildBottomNav(context),
     );
   }
 }
