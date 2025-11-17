@@ -347,16 +347,7 @@ class _LoginState extends ConsumerState<Login> {
               style: TextStyle(fontSize: 14, color: Color(0xFF64748B)),
             ),
             InkWell(
-              onTap: _isLoading
-                  ? null
-                  : () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Création de compte non disponible'),
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
-                    },
+              onTap: _isLoading ? null : () => context.go('/signup'),
               child: Text(
                 'Créer un compte',
                 style: TextStyle(

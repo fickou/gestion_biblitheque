@@ -4,6 +4,7 @@ import '../screens/catalogue.dart';
 import '../screens/dashbord.dart'; // ✅ Corrigé le nom du fichier
 import '../screens/home.dart';
 import '../screens/login.dart';
+import '../screens/signup.dart';
 import '../screens/profil.dart';
 import '../screens/reservation.dart';
 
@@ -33,6 +34,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/login',
         name: 'login',
         builder: (context, state) => const Login(),
+      ),
+      GoRoute(
+        path: '/signup',
+        name: 'signup',
+        builder: (context, state) => const Signup(),
       ),
       GoRoute(
         path: '/home',
