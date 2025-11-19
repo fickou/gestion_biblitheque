@@ -8,6 +8,8 @@ import '../screens/signup.dart';
 import '../screens/profil.dart';
 import '../screens/reservation.dart';
 
+import '../screens/admin/dashboard.dart';
+
 
 import '../screens/emprunts.dart';
 import '../screens/livreid.dart';
@@ -54,6 +56,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/dashboard',
         name: 'dashboard',
         builder: (context, state) => const DashboardPage(),
+      ),
+      GoRoute(
+        path: '/admin/dashboard',
+        name: 'admin_dashboard',
+        builder: (context, state) => const AdminDashboard(),
       ),
 
       GoRoute(

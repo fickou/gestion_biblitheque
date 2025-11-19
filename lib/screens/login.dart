@@ -50,7 +50,19 @@ class _LoginState extends ConsumerState<Login> {
             ),
           );
 
-          context.go('/dashboard');
+          // Redirection en fonction du type d'email
+          String redirectPath;
+          if (email.endsWith('@admin.com')) {
+            redirectPath = '/admin/dashboard';
+          } else if (email.endsWith('@user.com')) {
+            redirectPath = '/dashboard';
+          } else {
+            // Redirection par défaut si l'email ne correspond à aucun pattern
+            redirectPath = '/dashboard';
+          }
+
+          context.go(redirectPath);
+
         }
       } else {
         throw Exception('Identifiants incorrects');
