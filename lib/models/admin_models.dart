@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
 import 'book.dart';
-import 'user.dart';
-import 'emprunt.dart';
-import 'reservation.dart';
 
 /// Modèle pour les statistiques du dashboard
 class DashboardStat {
