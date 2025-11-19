@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../widgets/iconelivre.dart';
 
 class Signup extends StatefulWidget {
@@ -16,7 +17,7 @@ class _SignupState extends State<Signup> {
   final _matriculeController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  
+
   String _selectedRole = 'Étudiant';
 
   @override
@@ -37,13 +38,12 @@ class _SignupState extends State<Signup> {
           const SnackBar(
             content: Text('Les mots de passe ne correspondent pas'),
             backgroundColor: Colors.red,
-            duration: Duration(seconds: 2),
           ),
         );
         return;
       }
 
-      // Afficher un message de succès
+      // Message de succès
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Inscription réussie !'),
@@ -51,9 +51,9 @@ class _SignupState extends State<Signup> {
           duration: Duration(seconds: 2),
         ),
       );
-      
-      // Naviguer vers la page de connexion
-      Navigator.pushReplacementNamed(context, '/connexion');
+
+      // ➤ Redirection GoRouter vers le dashboard
+      context.go('/dashboard');
     }
   }
 
@@ -108,13 +108,13 @@ class _SignupState extends State<Signup> {
                       alignment: Alignment.topLeft,
                       child: IconButton(
                         icon: const Icon(Icons.arrow_back, color: Colors.white),
-                        onPressed: () => Navigator.pop(context),
+                        onPressed: () => context.go('/login'), // FIX
                       ),
                     ),
 
                     const SizedBox(height: 10),
 
-                    // Cercle jaune avec "UFR"
+                    // Logo rond
                     Container(
                       width: 80,
                       height: 80,
@@ -137,30 +137,18 @@ class _SignupState extends State<Signup> {
 
                     const SizedBox(height: 16),
 
-                    // Title
                     const Text(
                       'Créer un compte',
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
-                        letterSpacing: 1.2,
-                      ),
-                    ),
-
-                    const SizedBox(height: 8),
-
-                    Text(
-                      'UFR SAT - Université',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.white.withOpacity(0.8),
                       ),
                     ),
 
                     const SizedBox(height: 32),
 
-                    // Carte d'inscription
+                    // Formulaire
                     Card(
                       elevation: 24,
                       color: Colors.white.withOpacity(0.95),
@@ -174,106 +162,35 @@ class _SignupState extends State<Signup> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              // Nom et Prénom côte à côte
                               Row(
                                 children: [
                                   Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        const Text(
-                                          'Nom',
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w600,
-                                            color: Colors.black87,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        TextFormField(
-                                          controller: _nomController,
-                                          decoration: InputDecoration(
-                                            hintText: 'Votre nom',
-                                            filled: true,
-                                            fillColor: Colors.grey[50],
-                                            border: OutlineInputBorder(
-                                              borderRadius: BorderRadius.circular(6),
-                                              borderSide: BorderSide(color: Colors.grey[300]!),
-                                            ),
-                                            enabledBorder: OutlineInputBorder(
-                                              borderRadius: BorderRadius.circular(6),
-                                              borderSide: BorderSide(color: Colors.grey[300]!),
-                                            ),
-                                            focusedBorder: OutlineInputBorder(
-                                              borderRadius: BorderRadius.circular(6),
-                                              borderSide: const BorderSide(
-                                                color: Color.fromARGB(255, 44, 80, 164),
-                                                width: 2,
-                                              ),
-                                            ),
-                                            contentPadding: const EdgeInsets.symmetric(
-                                              horizontal: 16,
-                                              vertical: 12,
-                                            ),
-                                          ),
-                                          validator: (value) {
-                                            if (value == null || value.isEmpty) {
-                                              return 'Veuillez entrer votre nom';
-                                            }
-                                            return null;
-                                          },
-                                        ),
-                                      ],
+                                    child: TextFormField(
+                                      controller: _nomController,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Nom',
+                                      ),
+                                      validator: (value) {
+                                        if (value == null || value.isEmpty) {
+                                          return 'Veuillez entrer votre nom';
+                                        }
+                                        return null;
+                                      },
                                     ),
                                   ),
                                   const SizedBox(width: 16),
                                   Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        const Text(
-                                          'Prénom',
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w600,
-                                            color: Colors.black87,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        TextFormField(
-                                          controller: _prenomController,
-                                          decoration: InputDecoration(
-                                            hintText: 'Votre prénom',
-                                            filled: true,
-                                            fillColor: Colors.grey[50],
-                                            border: OutlineInputBorder(
-                                              borderRadius: BorderRadius.circular(6),
-                                              borderSide: BorderSide(color: Colors.grey[300]!),
-                                            ),
-                                            enabledBorder: OutlineInputBorder(
-                                              borderRadius: BorderRadius.circular(6),
-                                              borderSide: BorderSide(color: Colors.grey[300]!),
-                                            ),
-                                            focusedBorder: OutlineInputBorder(
-                                              borderRadius: BorderRadius.circular(6),
-                                              borderSide: const BorderSide(
-                                                color: Color.fromARGB(255, 44, 80, 164),
-                                                width: 2,
-                                              ),
-                                            ),
-                                            contentPadding: const EdgeInsets.symmetric(
-                                              horizontal: 16,
-                                              vertical: 12,
-                                            ),
-                                          ),
-                                          validator: (value) {
-                                            if (value == null || value.isEmpty) {
-                                              return 'Veuillez entrer votre prénom';
-                                            }
-                                            return null;
-                                          },
-                                        ),
-                                      ],
+                                    child: TextFormField(
+                                      controller: _prenomController,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Prénom',
+                                      ),
+                                      validator: (value) {
+                                        if (value == null || value.isEmpty) {
+                                          return 'Veuillez entrer votre prénom';
+                                        }
+                                        return null;
+                                      },
                                     ),
                                   ),
                                 ],
@@ -281,42 +198,10 @@ class _SignupState extends State<Signup> {
 
                               const SizedBox(height: 20),
 
-                              // Email field
-                              const Text(
-                                'Email',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
                               TextFormField(
                                 controller: _emailController,
-                                keyboardType: TextInputType.emailAddress,
-                                decoration: InputDecoration(
-                                  hintText: 'votre.email@univ.edu',
-                                  filled: true,
-                                  fillColor: Colors.grey[50],
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(6),
-                                    borderSide: BorderSide(color: Colors.grey[300]!),
-                                  ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(6),
-                                    borderSide: BorderSide(color: Colors.grey[300]!),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(6),
-                                    borderSide: const BorderSide(
-                                      color: Color.fromARGB(255, 44, 80, 164),
-                                      width: 2,
-                                    ),
-                                  ),
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 12,
-                                  ),
+                                decoration: const InputDecoration(
+                                  labelText: 'Email',
                                 ),
                                 validator: (value) {
                                   if (value == null || value.isEmpty) {
@@ -331,41 +216,10 @@ class _SignupState extends State<Signup> {
 
                               const SizedBox(height: 20),
 
-                              // Matricule field
-                              const Text(
-                                'Matricule',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
                               TextFormField(
                                 controller: _matriculeController,
-                                decoration: InputDecoration(
-                                  hintText: '2024-UFR-001',
-                                  filled: true,
-                                  fillColor: Colors.grey[50],
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(6),
-                                    borderSide: BorderSide(color: Colors.grey[300]!),
-                                  ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(6),
-                                    borderSide: BorderSide(color: Colors.grey[300]!),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(6),
-                                    borderSide: const BorderSide(
-                                      color: Color.fromARGB(255, 44, 80, 164),
-                                      width: 2,
-                                    ),
-                                  ),
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 12,
-                                  ),
+                                decoration: const InputDecoration(
+                                  labelText: 'Matricule',
                                 ),
                                 validator: (value) {
                                   if (value == null || value.isEmpty) {
@@ -377,87 +231,42 @@ class _SignupState extends State<Signup> {
 
                               const SizedBox(height: 20),
 
-                              // Role dropdown
-                              const Text(
-                                'Rôle',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[50],
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(color: Colors.grey[300]!),
-                                ),
-                                child: DropdownButtonFormField<String>(
-                                  value: _selectedRole,
-                                  decoration: const InputDecoration(
-                                    border: InputBorder.none,
-                                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                  ),
-                                  items: ['Étudiant', 'Enseignant', 'Administrateur']
-                                      .map((role) => DropdownMenuItem(
-                                            value: role,
-                                            child: Text(role),
-                                          ))
-                                      .toList(),
-                                  onChanged: (value) {
-                                    setState(() {
-                                      _selectedRole = value!;
-                                    });
-                                  },
+                              DropdownButtonFormField(
+                                value: _selectedRole,
+                                items: [
+                                  'Étudiant',
+                                  'Enseignant',
+                                  'Administrateur'
+                                ].map((role) {
+                                  return DropdownMenuItem(
+                                    value: role,
+                                    child: Text(role),
+                                  );
+                                }).toList(),
+                                onChanged: (value) {
+                                  setState(() {
+                                    _selectedRole = value!;
+                                  });
+                                },
+                                decoration: const InputDecoration(
+                                  labelText: 'Rôle',
                                 ),
                               ),
 
                               const SizedBox(height: 20),
 
-                              // Password field
-                              const Text(
-                                'Mot de passe',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
                               TextFormField(
                                 controller: _passwordController,
                                 obscureText: true,
-                                decoration: InputDecoration(
-                                  hintText: '••••••••',
-                                  filled: true,
-                                  fillColor: Colors.grey[50],
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(6),
-                                    borderSide: BorderSide(color: Colors.grey[300]!),
-                                  ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(6),
-                                    borderSide: BorderSide(color: Colors.grey[300]!),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(6),
-                                    borderSide: const BorderSide(
-                                      color: Color.fromARGB(255, 44, 80, 164),
-                                      width: 2,
-                                    ),
-                                  ),
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 12,
-                                  ),
+                                decoration: const InputDecoration(
+                                  labelText: 'Mot de passe',
                                 ),
                                 validator: (value) {
                                   if (value == null || value.isEmpty) {
-                                    return 'Veuillez entrer votre mot de passe';
+                                    return 'Entrez un mot de passe';
                                   }
                                   if (value.length < 6) {
-                                    return 'Le mot de passe doit contenir au moins 6 caractères';
+                                    return 'Min 6 caractères';
                                   }
                                   return null;
                                 },
@@ -465,133 +274,56 @@ class _SignupState extends State<Signup> {
 
                               const SizedBox(height: 20),
 
-                              // Confirm Password field
-                              const Text(
-                                'Confirmer le mot de passe',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
                               TextFormField(
                                 controller: _confirmPasswordController,
                                 obscureText: true,
-                                decoration: InputDecoration(
-                                  hintText: '••••••••',
-                                  filled: true,
-                                  fillColor: Colors.grey[50],
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(6),
-                                    borderSide: BorderSide(color: Colors.grey[300]!),
-                                  ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(6),
-                                    borderSide: BorderSide(color: Colors.grey[300]!),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(6),
-                                    borderSide: const BorderSide(
-                                      color: Color.fromARGB(255, 44, 80, 164),
-                                      width: 2,
-                                    ),
-                                  ),
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 12,
-                                  ),
+                                decoration: const InputDecoration(
+                                  labelText: 'Confirmer mot de passe',
                                 ),
                                 validator: (value) {
                                   if (value == null || value.isEmpty) {
-                                    return 'Veuillez confirmer votre mot de passe';
+                                    return 'Confirmez le mot de passe';
                                   }
                                   return null;
                                 },
                               ),
 
-                              const SizedBox(height: 24),
+                              const SizedBox(height: 25),
 
-                              // Register button
-                              SizedBox(
-                                height: 48,
-                                child: ElevatedButton(
-                                  onPressed: _handleInscription,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color.fromARGB(255, 44, 80, 164),
-                                    foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                  ),
-                                  child: const Text(
-                                    "S'inscrire",
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
+                              // 🔥 BOUTON INSCRIPTION
+                              ElevatedButton(
+                                onPressed: _handleInscription,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color.fromARGB(255, 44, 80, 164),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                ),
+                                child: const Text(
+                                  "S'inscrire",
+                                  style: TextStyle(fontSize: 18),
                                 ),
                               ),
 
-                              const SizedBox(height: 20),
+                              const SizedBox(height: 12),
 
-                              // Login link
                               Center(
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const Text(
-                                      'Déjà un compte ? ',
-                                      style: TextStyle(
-                                        color: Colors.black54,
-                                        fontSize: 14,
-                                      ),
+                                child: TextButton(
+                                  onPressed: () => context.go('/login'),
+                                  child: const Text(
+                                    'Se connecter',
+                                    style: TextStyle(
+                                      color: Color.fromARGB(255, 44, 80, 164),
+                                      fontWeight: FontWeight.bold,
                                     ),
-                                    TextButton(
-                                      onPressed: () {
-                                        Navigator.pop(context);
-                                      },
-                                      style: TextButton.styleFrom(
-                                        padding: EdgeInsets.zero,
-                                        minimumSize: const Size(0, 0),
-                                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                      ),
-                                      child: const Text(
-                                        'Se connecter',
-                                        style: TextStyle(
-                                          color: Color.fromARGB(255, 44, 80, 164),
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
+                                  ),
                                 ),
-                              ),
+                              )
                             ],
                           ),
                         ),
                       ),
                     ),
-
-                    const SizedBox(height: 32),
                   ],
-                ),
-              ),
-            ),
-          ),
-
-          // Footer
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Text(
-                '© UFR SAT 2025',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.white.withOpacity(0.6),
                 ),
               ),
             ),
