@@ -41,48 +41,48 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyDVGNFelB6K_L3No9WqR41iCkGLvoHk-3E',
-    appId: '1:590834146972:web:ee46ff5de1caecd692d759',
-    messagingSenderId: '590834146972',
-    projectId: 'gestionbibliotheques',
-    authDomain: 'gestionbibliotheques.firebaseapp.com',
-    storageBucket: 'gestionbibliotheques.firebasestorage.app',
-    measurementId: 'G-4SSPJD2EX3',
+    apiKey: 'AIzaSyAUAIytl1PxSkEpTUJ0OoMn98EHrTgk4QQ',
+    appId: '1:833490458542:web:0c76c3718243a4277d5a3f',
+    messagingSenderId: '833490458542',
+    projectId: 'gestionbibliotheque-a8b1e',
+    authDomain: 'gestionbibliotheque-a8b1e.firebaseapp.com',
+    storageBucket: 'gestionbibliotheque-a8b1e.firebasestorage.app',
+    measurementId: 'G-D1ELQEZ9P9',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyCFqLCdSfA8ri6P-TqG7R8Z43fpkF1IWU4',
-    appId: '1:590834146972:android:80b2cd6d2fd41bd192d759',
-    messagingSenderId: '590834146972',
-    projectId: 'gestionbibliotheques',
-    storageBucket: 'gestionbibliotheques.firebasestorage.app',
+    apiKey: 'AIzaSyAyP-obx1FLiz6r1rDuzIcQG6QNp_ZBsho',
+    appId: '1:833490458542:android:4431383ca9d855f97d5a3f',
+    messagingSenderId: '833490458542',
+    projectId: 'gestionbibliotheque-a8b1e',
+    storageBucket: 'gestionbibliotheque-a8b1e.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyCqW_jaOR4q9lRbIyLHRrAmoTkGwSxblfY',
-    appId: '1:590834146972:ios:11fa52f9132c67c592d759',
-    messagingSenderId: '590834146972',
-    projectId: 'gestionbibliotheques',
-    storageBucket: 'gestionbibliotheques.firebasestorage.app',
+    apiKey: 'AIzaSyCV2O__CVrP8eGR-hLXVjiNFG9QjQTJv8c',
+    appId: '1:833490458542:ios:5dd147793af986347d5a3f',
+    messagingSenderId: '833490458542',
+    projectId: 'gestionbibliotheque-a8b1e',
+    storageBucket: 'gestionbibliotheque-a8b1e.firebasestorage.app',
     iosBundleId: 'com.example.gestionBibliotheque',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyCqW_jaOR4q9lRbIyLHRrAmoTkGwSxblfY',
-    appId: '1:590834146972:ios:11fa52f9132c67c592d759',
-    messagingSenderId: '590834146972',
-    projectId: 'gestionbibliotheques',
-    storageBucket: 'gestionbibliotheques.firebasestorage.app',
+    apiKey: 'AIzaSyCV2O__CVrP8eGR-hLXVjiNFG9QjQTJv8c',
+    appId: '1:833490458542:ios:5dd147793af986347d5a3f',
+    messagingSenderId: '833490458542',
+    projectId: 'gestionbibliotheque-a8b1e',
+    storageBucket: 'gestionbibliotheque-a8b1e.firebasestorage.app',
     iosBundleId: 'com.example.gestionBibliotheque',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyDVGNFelB6K_L3No9WqR41iCkGLvoHk-3E',
-    appId: '1:590834146972:web:759ad455d17493cb92d759',
-    messagingSenderId: '590834146972',
-    projectId: 'gestionbibliotheques',
-    authDomain: 'gestionbibliotheques.firebaseapp.com',
-    storageBucket: 'gestionbibliotheques.firebasestorage.app',
-    measurementId: 'G-9PE2EJWDQC',
+    apiKey: 'AIzaSyAUAIytl1PxSkEpTUJ0OoMn98EHrTgk4QQ',
+    appId: '1:833490458542:web:be05be940ee400b07d5a3f',
+    messagingSenderId: '833490458542',
+    projectId: 'gestionbibliotheque-a8b1e',
+    authDomain: 'gestionbibliotheque-a8b1e.firebaseapp.com',
+    storageBucket: 'gestionbibliotheque-a8b1e.firebasestorage.app',
+    measurementId: 'G-KM6VE3RPZ8',
   );
 }
