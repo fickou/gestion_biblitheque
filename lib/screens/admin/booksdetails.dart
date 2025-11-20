@@ -1,4 +1,4 @@
-// lib/screens/book_detail_page.dart
+// lib/screens/bookdetails.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../models/book.dart';

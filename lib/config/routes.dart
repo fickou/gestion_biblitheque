@@ -73,10 +73,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const BooksAdminPage(),
       ),
       GoRoute(
-        path: '/admin/booksdetails',
-        name: 'admin_booksdetails',
-        builder: (context, state) => const BookDetailPage(id: '1',),
-      ),
+      path: '/admin/booksdetails/:id',  // ← Ajoutez :id ici
+      name: 'admin_booksdetails',
+      builder: (context, state) {
+        final id = state.pathParameters['id']!;  // ← Récupérez l'ID
+        return BookDetailPage(id: id);
+      },
+    ),
 
       GoRoute(
         path: '/admin/emprunts',
