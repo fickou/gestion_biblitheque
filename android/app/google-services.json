@@ -1,13 +1,23 @@
 {
   "project_info": {
+<<<<<<< HEAD
     "project_number": "833490458542",
     "project_id": "gestionbibliotheque-a8b1e",
     "storage_bucket": "gestionbibliotheque-a8b1e.firebasestorage.app"
+=======
+    "project_number": "590834146972",
+    "project_id": "gestionbibliotheques",
+    "storage_bucket": "gestionbibliotheques.firebasestorage.app"
+>>>>>>> c9ba9fc5e5b2cf1ee8b5a23085abef46bc6efc57
   },
   "client": [
     {
       "client_info": {
+<<<<<<< HEAD
         "mobilesdk_app_id": "1:833490458542:android:4431383ca9d855f97d5a3f",
+=======
+        "mobilesdk_app_id": "1:590834146972:android:80b2cd6d2fd41bd192d759",
+>>>>>>> c9ba9fc5e5b2cf1ee8b5a23085abef46bc6efc57
         "android_client_info": {
           "package_name": "com.example.gestion_bibliotheque"
         }
@@ -15,7 +25,11 @@
       "oauth_client": [],
       "api_key": [
         {
+<<<<<<< HEAD
           "current_key": "AIzaSyAyP-obx1FLiz6r1rDuzIcQG6QNp_ZBsho"
+=======
+          "current_key": "AIzaSyCFqLCdSfA8ri6P-TqG7R8Z43fpkF1IWU4"
+>>>>>>> c9ba9fc5e5b2cf1ee8b5a23085abef46bc6efc57
         }
       ],
       "services": {

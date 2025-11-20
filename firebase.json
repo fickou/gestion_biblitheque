@@ -1,1 +1,5 @@
+<<<<<<< HEAD
 {"flutter":{"platforms":{"android":{"default":{"projectId":"gestionbibliotheque-a8b1e","appId":"1:833490458542:android:4431383ca9d855f97d5a3f","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"gestionbibliotheque-a8b1e","configurations":{"android":"1:833490458542:android:4431383ca9d855f97d5a3f","ios":"1:833490458542:ios:5dd147793af986347d5a3f","macos":"1:833490458542:ios:5dd147793af986347d5a3f","web":"1:833490458542:web:0c76c3718243a4277d5a3f","windows":"1:833490458542:web:be05be940ee400b07d5a3f"}}}}}}
+=======
+{"flutter":{"platforms":{"android":{"default":{"projectId":"gestionbibliotheques","appId":"1:590834146972:android:80b2cd6d2fd41bd192d759","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"gestionbibliotheques","configurations":{"android":"1:590834146972:android:80b2cd6d2fd41bd192d759","ios":"1:590834146972:ios:11fa52f9132c67c592d759","macos":"1:590834146972:ios:11fa52f9132c67c592d759","web":"1:590834146972:web:ee46ff5de1caecd692d759","windows":"1:590834146972:web:759ad455d17493cb92d759"}}}}}}
+>>>>>>> c9ba9fc5e5b2cf1ee8b5a23085abef46bc6efc57
