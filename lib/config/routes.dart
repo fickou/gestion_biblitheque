@@ -9,6 +9,9 @@ import '../screens/profil.dart';
 import '../screens/reservation.dart';
 import '../screens/admin/books.dart';
 import '../screens/admin/dashboard.dart';
+import '../screens/admin/books.dart';
+import '../screens/admin/booksdetails.dart';
+import '../screens/admin/loans.dart';
 
 
 import '../screens/emprunts.dart';
@@ -57,10 +60,28 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: 'dashboard',
         builder: (context, state) => const DashboardPage(),
       ),
+
+      //admin
       GoRoute(
         path: '/admin/dashboard',
         name: 'admin_dashboard',
         builder: (context, state) => const AdminDashboard(),
+      ),
+      GoRoute(
+        path: '/admin/books',
+        name: 'admin_books',
+        builder: (context, state) => const BooksAdminPage(),
+      ),
+      GoRoute(
+        path: '/admin/booksdetails',
+        name: 'admin_booksdetails',
+        builder: (context, state) => const BookDetailPage(id: '1',),
+      ),
+
+      GoRoute(
+        path: '/admin/emprunts',
+        name: 'admin_emprunts',
+        builder: (context, state) => const EmpruntsAdminPage(),
       ),
 
       GoRoute(
