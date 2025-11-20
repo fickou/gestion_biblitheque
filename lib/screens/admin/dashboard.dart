@@ -401,6 +401,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             icon: Icon(Icons.menu_book_outlined),
             activeIcon: Icon(Icons.menu_book),
             label: 'Livres',
+            
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.people_outline),

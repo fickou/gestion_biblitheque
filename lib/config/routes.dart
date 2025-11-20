@@ -7,7 +7,7 @@ import '../screens/login.dart';
 import '../screens/signup.dart';
 import '../screens/profil.dart';
 import '../screens/reservation.dart';
-
+import '../screens/admin/books.dart';
 import '../screens/admin/dashboard.dart';
 
 
@@ -86,6 +86,14 @@ final routerProvider = Provider<GoRouter>((ref) {
           return LivreDetailPage(id: id);
         },
       ),
+
+      GoRoute(
+        path: '/admin/livres',
+        name: 'livres-admin',
+        builder: (context, state) => const BooksAdminPage(),
+      ),
+
+
     ],
   );
 });
