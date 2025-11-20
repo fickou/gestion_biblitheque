@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import '../../models/book.dart';
 
-class EmpruntsPage extends StatefulWidget {
-  const EmpruntsPage({super.key});
+class EmpruntsAdminPage extends StatefulWidget {
+  const EmpruntsAdminPage({super.key});
 
   @override
-  State<EmpruntsPage> createState() => _EmpruntsPageState();
+  State<EmpruntsAdminPage> createState() => _EmpruntsAdminPageState();
 }
 
-class _EmpruntsPageState extends State<EmpruntsPage> {
+class _EmpruntsAdminPageState extends State<EmpruntsAdminPage> {
   List<Book> loans = Book.emprunts;
   String searchQuery = "";
 

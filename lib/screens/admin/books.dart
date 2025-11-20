@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../models/book.dart';
 class BooksAdminPage extends StatefulWidget {
   const BooksAdminPage({super.key});
@@ -250,6 +251,83 @@ class _BooksAdminPageState extends State<BooksAdminPage> {
           ],
         ),
       ),
+      bottomNavigationBar: _buildBottomNav(),
     );
+  }
+
+  Widget _buildBottomNav() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: BottomNavigationBar(
+        currentIndex: _getCurrentIndex(context),
+        onTap: (index) => _onItemTapped(index, context),
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: Colors.white,
+        selectedItemColor: const Color.fromARGB(255, 44, 80, 164),
+        unselectedItemColor: const Color(0xFF64748B),
+        selectedFontSize: 12,
+        unselectedFontSize: 12,
+        elevation: 0,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.dashboard_outlined),
+            activeIcon: Icon(Icons.dashboard),
+            label: 'Dashboard',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.menu_book_outlined),
+            activeIcon: Icon(Icons.menu_book),
+            label: 'Livres',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.people_outline),
+            activeIcon: Icon(Icons.people),
+            label: 'Utilisateurs',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.settings_outlined),
+            activeIcon: Icon(Icons.settings),
+            label: 'Paramètres',
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Méthode pour déterminer l'index actuel
+  int _getCurrentIndex(BuildContext context) {
+    final location = GoRouterState.of(context).matchedLocation;
+    if (location == '/admin/dashboard') return 0;
+    if (location == '/admin/books') return 1;
+    if (location == '/emprunts') return 2;
+    if (location == '/profil') return 3;
+    return 0;
+  }
+
+  // Navigation pour la bottom bar
+  void _onItemTapped(int index, BuildContext context) {
+    switch (index) {
+      case 0:
+        context.go('/admin/dashboard');
+        break;
+      case 1:
+        context.go('/admin/books');
+        break;
+      case 2:
+        context.go('/emprunts');
+        break;
+      case 3:
+        context.go('/profil');
+        break;
+    }
   }
 }

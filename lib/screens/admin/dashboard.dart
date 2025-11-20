@@ -3,6 +3,7 @@ import 'package:gestion_bibliotheque/models/admin_models.dart';
 import 'package:gestion_bibliotheque/widgets/stat_card.dart';
 import 'package:gestion_bibliotheque/widgets/activity_item.dart';
 import 'package:gestion_bibliotheque/widgets/top_book_card.dart';
+import 'package:go_router/go_router.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({Key? key}) : super(key: key);
@@ -12,7 +13,6 @@ class AdminDashboard extends StatefulWidget {
 }
 
 class _AdminDashboardState extends State<AdminDashboard> {
-  int _currentIndex = 0;
 
   // Données des statistiques - Chargées depuis les modèles
   late List<DashboardStat> stats;
@@ -378,12 +378,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
         ],
       ),
       child: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
+        currentIndex: _getCurrentIndex(context),
+        onTap: (index) => _onItemTapped(index, context),
         type: BottomNavigationBarType.fixed,
         backgroundColor: Colors.white,
         selectedItemColor: const Color.fromARGB(255, 44, 80, 164),
@@ -415,5 +411,33 @@ class _AdminDashboardState extends State<AdminDashboard> {
         ],
       ),
     );
+  }
+
+  // Méthode pour déterminer l'index actuel
+  int _getCurrentIndex(BuildContext context) {
+    final location = GoRouterState.of(context).matchedLocation;
+    if (location == '/admin/dashboard') return 0;
+    if (location == '/admin/books') return 1;
+    if (location == '/emprunts') return 2;
+    if (location == '/profil') return 3;
+    return 0;
+  }
+
+  // Navigation pour la bottom bar
+  void _onItemTapped(int index, BuildContext context) {
+    switch (index) {
+      case 0:
+        context.go('/admin/dashboard');
+        break;
+      case 1:
+        context.go('/admin/books');
+        break;
+      case 2:
+        context.go('/emprunts');
+        break;
+      case 3:
+        context.go('/profil');
+        break;
+    }
   }
 }
