@@ -7,11 +7,11 @@ class TopBookCard extends StatelessWidget {
   final int loans;
 
   const TopBookCard({
-    Key? key,
+    super.key,
     required this.title,
     required this.author,
     required this.loans,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

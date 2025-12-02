@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gestion_bibliotheque/models/emprunt.dart';
 import 'book.dart';
 
 /// Modèle pour les statistiques du dashboard
@@ -102,7 +103,7 @@ class AdminDashboardData {
         title: 'Livres en Retard',
         value: '$lateBooks',
         icon: Icons.access_time,
-        trend: '${lateBooks > 0 ? 'À récupérer' : 'Aucun retard'}',
+        trend: lateBooks > 0 ? 'À récupérer' : 'Aucun retard',
         trendUp: false,
       ),
       DashboardStat(

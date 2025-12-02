@@ -1,0 +1,55 @@
+// widgets/notification_icon_with_badge.dart
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:gestion_bibliotheque/models/notif.dart';
+
+class NotificationIconWithBadge extends StatelessWidget {
+  final NotificationsService notificationsService = NotificationsService();
+
+  NotificationIconWithBadge({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final unreadCount = notificationsService.unreadCount;
+    
+    return Stack(
+      children: [
+        IconButton(
+          icon: const Icon(Icons.notifications_outlined),
+          color: const Color(0xFF64748B),
+          onPressed: () {
+            // Debug: Vérifiez si cette fonction est appelée
+            print('Notification icon pressed');
+            context.go('/admin/notifications');
+          },
+        ),
+        if (unreadCount > 0)
+          Positioned(
+            right: 8,
+            top: 8,
+            child: Container(
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                color: Colors.red,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.white, width: 1.5),
+              ),
+              constraints: const BoxConstraints(
+                minWidth: 18,
+                minHeight: 18,
+              ),
+              child: Text(
+                unreadCount > 9 ? '9+' : unreadCount.toString(),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}

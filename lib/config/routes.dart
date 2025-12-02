@@ -1,3 +1,6 @@
+import 'package:gestion_bibliotheque/screens/admin/notification.dart';
+import 'package:gestion_bibliotheque/screens/admin/profil.dart';
+import 'package:gestion_bibliotheque/screens/admin/users.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../screens/catalogue.dart';
@@ -80,13 +83,27 @@ final routerProvider = Provider<GoRouter>((ref) {
         return BookDetailPage(id: id);
       },
     ),
-
+// Dans votre configuration GoRouter
+    GoRoute(
+      path: '/admin/notifications',
+      name: 'admin_notifications',
+      builder: (context, state) => const NotificationsPage(),
+    ),
       GoRoute(
         path: '/admin/emprunts',
         name: 'admin_emprunts',
-        builder: (context, state) => const EmpruntsAdminPage(),
+        builder: (context, state) => const AdminLoansPage(),
       ),
-
+      GoRoute(
+        path: '/admin/etudiants',
+        name: 'admin_students',
+        builder: (context, state) => const StudentsPage(),
+      ),
+      GoRoute(
+              path: '/profiladmin', // Route pour le profil
+              name: 'profiladmin',
+              builder: (context, state) => const AdminProfilePage(), // Page de profil
+      ),
       GoRoute(
         path: '/profil',
         name: 'profil',
@@ -102,21 +119,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: 'emprunts',
         builder: (context, state) => const EmpruntsPage(),
       ),
-      GoRoute(
-        path: '/livre/:id',
-        name: 'livre',
-        builder: (context, state) {
-          final id = state.pathParameters['id']!;
-          return LivreDetailPage(id: id);
-        },
-      ),
-
-      GoRoute(
-        path: '/admin/livres',
-        name: 'livres-admin',
-        builder: (context, state) => const BooksAdminPage(),
-      ),
-
+    
 
     ],
   );
