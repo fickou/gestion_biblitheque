@@ -15,6 +15,8 @@ class User {
     required this.role,
     required this.avatarText,
   });
+
+  get status => null;
 }
 
 // Données utilisateur (à remplacer par les vraies données utilisateur)

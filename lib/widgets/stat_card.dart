@@ -9,13 +9,13 @@ class StatCard extends StatelessWidget {
   final bool trendUp;
 
   const StatCard({
-    Key? key,
+    super.key,
     required this.title,
     required this.value,
     required this.icon,
     required this.trend,
     required this.trendUp,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

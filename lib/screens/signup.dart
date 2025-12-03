@@ -232,7 +232,7 @@ class _SignupState extends State<Signup> {
                               const SizedBox(height: 20),
 
                               DropdownButtonFormField(
-                                value: _selectedRole,
+                                initialValue: _selectedRole,
                                 items: [
                                   'Étudiant',
                                   'Enseignant',

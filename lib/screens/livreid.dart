@@ -35,7 +35,7 @@ class LivreDetailPage extends StatelessWidget {
     // ───────────────────────────────
     // FOOTER / BOTTOM NAVIGATION
     // ───────────────────────────────
-    Widget _buildBottomNav() {
+    Widget buildBottomNav() {
       return Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -359,7 +359,7 @@ class LivreDetailPage extends StatelessWidget {
       ),
 
       // FOOTER
-      bottomNavigationBar: _buildBottomNav(),
+      bottomNavigationBar: buildBottomNav(),
     );
   }
 }

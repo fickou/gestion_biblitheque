@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 /// Page d'accueil de l'application Bibliothèque UFR SAT
 /// Conversion fidèle du design React/Tailwind
 class Home extends StatelessWidget {
-  const Home({Key? key}) : super(key: key);
+  const Home({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -316,10 +316,10 @@ class _AnimatedFloatingBook extends StatefulWidget {
   final Duration delay;
 
   const _AnimatedFloatingBook({
-    Key? key,
+    super.key,
     required this.size,
     required this.delay,
-  }) : super(key: key);
+  });
 
   @override
   State<_AnimatedFloatingBook> createState() => _AnimatedFloatingBookState();

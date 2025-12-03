@@ -1,20 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:gestion_bibliotheque/models/admin_models.dart';
+import 'package:gestion_bibliotheque/widgets/notif.dart';
 import 'package:gestion_bibliotheque/widgets/stat_card.dart';
 import 'package:gestion_bibliotheque/widgets/activity_item.dart';
 import 'package:gestion_bibliotheque/widgets/top_book_card.dart';
 import 'package:go_router/go_router.dart';
 
 class AdminDashboard extends StatefulWidget {
-  const AdminDashboard({Key? key}) : super(key: key);
+  const AdminDashboard({super.key});
 
   @override
   State<AdminDashboard> createState() => _AdminDashboardState();
 }
 
 class _AdminDashboardState extends State<AdminDashboard> {
-
-  // Données des statistiques - Chargées depuis les modèles
   late List<DashboardStat> stats;
   late List<RecentActivity> recentActivities;
   late List<TopBook> topBooks;
@@ -25,7 +24,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
     _loadData();
   }
 
-  /// Charge les données depuis AdminDashboardData
   void _loadData() {
     stats = AdminDashboardData.getStats();
     recentActivities = AdminDashboardData.getRecentActivities();
@@ -35,7 +33,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: const Color(0xFFF8FAFC), // équivalent bg-secondary/30
       body: SafeArea(
         child: Column(
           children: [
@@ -89,15 +87,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
             ),
           ),
           const Spacer(),
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined),
-            color: const Color(0xFF64748B),
-            onPressed: () {},
-          ),
+          NotificationIconWithBadge(),
           IconButton(
             icon: const Icon(Icons.settings_outlined),
             color: const Color(0xFF64748B),
-            onPressed: () {},
+            onPressed: () => context.go('/profiladmin'),
           ),
         ],
       ),
@@ -171,13 +165,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
           return Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: _buildRecentActivitiesCard(),
-              ),
+              Expanded(child: _buildRecentActivitiesCard()),
               const SizedBox(width: 16),
-              Expanded(
-                child: _buildTopBooksCard(),
-              ),
+              Expanded(child: _buildTopBooksCard()),
             ],
           );
         } else {
@@ -198,10 +188,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       elevation: 2,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: const Color(0xFFE2E8F0).withOpacity(0.4),
-          width: 1,
-        ),
+        side: BorderSide(color: const Color(0xFFE2E8F0).withOpacity(0.4), width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -210,19 +197,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                Icon(
-                  Icons.trending_up,
-                  color: const Color.fromARGB(255, 44, 80, 164),
-                  size: 20,
-                ),
+                Icon(Icons.trending_up, color: const Color.fromARGB(255, 44, 80, 164), size: 20),
                 const SizedBox(width: 8),
                 Text(
                   'Dernières Activités',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF0F172A),
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A)),
                 ),
               ],
             ),
@@ -251,10 +230,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       elevation: 2,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: const Color(0xFFE2E8F0).withOpacity(0.4),
-          width: 1,
-        ),
+        side: BorderSide(color: const Color(0xFFE2E8F0).withOpacity(0.4), width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -263,19 +239,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                Icon(
-                  Icons.arrow_upward,
-                  color: const Color.fromARGB(255, 44, 80, 164),
-                  size: 20,
-                ),
+                Icon(Icons.arrow_upward, color: const Color.fromARGB(255, 44, 80, 164), size: 20),
                 const SizedBox(width: 8),
                 Text(
                   'Livres les Plus Empruntés',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF0F172A),
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A)),
                 ),
               ],
             ),
@@ -286,11 +254,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               children: topBooks.map((book) {
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 12),
-                  child: TopBookCard(
-                    title: book.title,
-                    author: book.author,
-                    loans: book.loans,
-                  ),
+                  child: TopBookCard(title: book.title, author: book.author, loans: book.loans),
                 );
               }).toList(),
             ),
@@ -305,10 +269,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       elevation: 2,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: const Color(0xFFE2E8F0).withOpacity(0.4),
-          width: 1,
-        ),
+        side: BorderSide(color: const Color(0xFFE2E8F0).withOpacity(0.4), width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -317,11 +278,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             padding: const EdgeInsets.all(16),
             child: Text(
               'Statistiques d\'Emprunts par Mois',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF0F172A),
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A)),
             ),
           ),
           Container(
@@ -335,26 +292,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.trending_up,
-                    size: 48,
-                    color: const Color.fromARGB(255, 44, 80, 164),
-                  ),
+                  Icon(Icons.trending_up, size: 48, color: const Color.fromARGB(255, 44, 80, 164)),
                   const SizedBox(height: 16),
                   Text(
                     'Graphique des statistiques à venir',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: const Color(0xFF64748B),
-                    ),
+                    style: TextStyle(fontSize: 14, color: const Color(0xFF64748B)),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     '${AdminDashboardData.getDashboardMetrics()['borrowedBooks']} emprunts actifs',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: const Color(0xFF64748B),
-                    ),
+                    style: TextStyle(fontSize: 12, color: const Color(0xFF64748B)),
                   ),
                 ],
               ),
@@ -370,11 +317,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, -2),
-          ),
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, -2)),
         ],
       ),
       child: BottomNavigationBar(
@@ -388,43 +331,26 @@ class _AdminDashboardState extends State<AdminDashboard> {
         unselectedFontSize: 12,
         elevation: 0,
         items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard_outlined),
-            activeIcon: Icon(Icons.dashboard),
-            label: 'Dashboard',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.menu_book_outlined),
-            activeIcon: Icon(Icons.menu_book),
-            label: 'Livres',
-            
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.people_outline),
-            activeIcon: Icon(Icons.people),
-            label: 'Utilisateurs',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings_outlined),
-            activeIcon: Icon(Icons.settings),
-            label: 'Paramètres',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Dashboard'),
+          BottomNavigationBarItem(icon: Icon(Icons.menu_book_outlined), activeIcon: Icon(Icons.menu_book), label: 'Livres'),
+          BottomNavigationBarItem(icon: Icon(Icons.people_outlined), activeIcon: Icon(Icons.people), label: 'Etudiants'),
+          BottomNavigationBarItem(icon: Icon(Icons.history_outlined), activeIcon: Icon(Icons.history), label: 'Emprunts'),
+          BottomNavigationBarItem(icon: Icon(Icons.settings_outlined), activeIcon: Icon(Icons.settings), label: 'Profil'),
         ],
       ),
     );
   }
 
-  // Méthode pour déterminer l'index actuel
   int _getCurrentIndex(BuildContext context) {
     final location = GoRouterState.of(context).matchedLocation;
     if (location == '/admin/dashboard') return 0;
     if (location == '/admin/books') return 1;
-    if (location == '/emprunts') return 2;
-    if (location == '/profil') return 3;
+    if (location == '/admin/etudiants') return 2;
+    if (location == '/admin/emprunts') return 3;
+    if (location == '/profiladmin') return 4;
     return 0;
   }
 
-  // Navigation pour la bottom bar
   void _onItemTapped(int index, BuildContext context) {
     switch (index) {
       case 0:
@@ -434,10 +360,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
         context.go('/admin/books');
         break;
       case 2:
-        context.go('/emprunts');
+        context.go('/admin/etudiants');
         break;
       case 3:
-        context.go('/profil');
+        context.go('/admin/emprunts');
+        break;
+      case 4:
+        context.go('/profiladmin');
         break;
     }
   }

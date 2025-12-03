@@ -8,12 +8,12 @@ class ActivityItem extends StatelessWidget {
   final Color iconColor;
 
   const ActivityItem({
-    Key? key,
+    super.key,
     required this.icon,
     required this.title,
     required this.time,
     required this.iconColor,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

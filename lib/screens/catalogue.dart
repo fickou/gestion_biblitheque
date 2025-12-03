@@ -4,7 +4,7 @@ import '../models/book.dart';
 import '../components/book_card.dart';
 
 class CataloguePage extends StatefulWidget {
-  const CataloguePage({Key? key}) : super(key: key);
+  const CataloguePage({super.key});
 
   @override
   State<CataloguePage> createState() => _CataloguePageState();

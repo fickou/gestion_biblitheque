@@ -178,6 +178,10 @@ class Book {
     ),
   ];
 
+  get availableCopies => null;
+
+  get isbn => null;
+
   // Méthode utilitaire pour récupérer un livre par son ID
   static Book? getBookById(String id) {
     // Chercher d'abord dans newBooks et popularBooks qui ont les descriptions

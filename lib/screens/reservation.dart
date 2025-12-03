@@ -152,10 +152,10 @@ class ReservationsPage extends StatelessWidget {
                                           Expanded(
                                             child: OutlinedButton(
                                               style: ButtonStyle(
-                                                side: MaterialStateProperty.resolveWith<BorderSide>(
+                                                side: WidgetStateProperty.resolveWith<BorderSide>(
                                                   (states) {
-                                                    if (states.contains(MaterialState.hovered) ||
-                                                        states.contains(MaterialState.pressed)) {
+                                                    if (states.contains(WidgetState.hovered) ||
+                                                        states.contains(WidgetState.pressed)) {
                                                       return BorderSide(
                                                         color: Color(0xFF0D6EFD),
                                                         width: 1.5,
@@ -168,29 +168,29 @@ class ReservationsPage extends StatelessWidget {
                                                   },
                                                 ),
                                                 foregroundColor:
-                                                    MaterialStateProperty.resolveWith<Color>(
+                                                    WidgetStateProperty.resolveWith<Color>(
                                                         (states) {
-                                                  if (states.contains(MaterialState.hovered) ||
-                                                      states.contains(MaterialState.pressed)) {
+                                                  if (states.contains(WidgetState.hovered) ||
+                                                      states.contains(WidgetState.pressed)) {
                                                     return Colors.white; // Texte blanc au survol
                                                   }
                                                   return Colors.black;
                                                 }),
                                                 backgroundColor:
-                                                    MaterialStateProperty.resolveWith<Color?>(
+                                                    WidgetStateProperty.resolveWith<Color?>(
                                                         (states) {
-                                                  if (states.contains(MaterialState.hovered) ||
-                                                      states.contains(MaterialState.pressed)) {
+                                                  if (states.contains(WidgetState.hovered) ||
+                                                      states.contains(WidgetState.pressed)) {
                                                     return Color(0xFF0D6EFD); // Bleu clair au survol
                                                   }
                                                   return Colors.transparent;
                                                 }),
-                                                shape: MaterialStateProperty.all(
+                                                shape: WidgetStateProperty.all(
                                                   RoundedRectangleBorder(
                                                       borderRadius:
                                                           BorderRadius.circular(8)),
                                                 ),
-                                                padding: MaterialStateProperty.all(
+                                                padding: WidgetStateProperty.all(
                                                   const EdgeInsets.symmetric(vertical: 12),
                                                 ),
                                               ),
