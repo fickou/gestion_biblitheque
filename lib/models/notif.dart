@@ -1,3 +1,4 @@
+// lib/models/notif.dart
 import 'package:flutter/material.dart';
 
 class NotificationItem {
