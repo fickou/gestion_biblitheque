@@ -74,7 +74,7 @@ class BookCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
-                            book.category,
+                            book.category?.name ?? 'Non catégorisé',
                             style: TextStyle(
                               fontSize: 12,
                               color: Color(0xFF64748B),

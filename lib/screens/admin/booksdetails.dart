@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gestion_bibliotheque/models/book.dart';
 import 'package:gestion_bibliotheque/widgets/notif.dart';
 import 'package:go_router/go_router.dart';
+import '../../services/api_service.dart';
 
 class BookDetailPage extends StatefulWidget {
   final String id;
@@ -13,567 +14,574 @@ class BookDetailPage extends StatefulWidget {
 }
 
 class _BookDetailPageState extends State<BookDetailPage> {
+  final ApiService _apiService = ApiService();
+  Book? _book;
+  bool _isLoading = true;
+  String? _error;
+  bool _isDeleting = false;
+
   @override
-  Widget build(BuildContext context) {
-    final book = Book.getBookById(widget.id);
-    
-    if (book == null) {
-      return Scaffold(
-        backgroundColor: const Color(0xFFF8FAFC),
-        body: SafeArea(
-          child: Column(
-            children: [
-              _buildHeader(context),
-              Expanded(
-                child: Center(
-                  child: Text(
-                    'Livre non trouvé',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: const Color(0xFF64748B),
-                    ),
-                  ),
-                ),
-              ),
-            ],
+  void initState() {
+    super.initState();
+    _loadBook();
+  }
+
+  Future<void> _loadBook() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final book = await _apiService.getBookById(widget.id);
+      setState(() {
+        _book = book;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = 'Erreur de chargement: $e';
+        _isLoading = false;
+      });
+      print('Erreur chargement livre: $e');
+    }
+  }
+
+  Future<void> _deleteBook() async {
+    if (_book == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirmer la suppression'),
+        content: Text('Voulez-vous vraiment supprimer le livre "${_book!.title}" ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Annuler'),
           ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() {
+      _isDeleting = true;
+    });
+
+    try {
+      final result = await _apiService.deleteBook(_book!.id);
+      
+      if (result['success'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('"${_book!.title}" supprimé avec succès'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+        
+        Future.delayed(const Duration(milliseconds: 500), () {
+          context.go('/admin/books');
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Erreur lors de la suppression'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+        setState(() {
+          _isDeleting = false;
+        });
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erreur: $e'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
         ),
-        bottomNavigationBar: _buildBottomNav(),
+      );
+      setState(() {
+        _isDeleting = false;
+      });
+    }
+  }
+
+  Future<void> _borrowBook() async {
+    if (_book == null) return;
+
+    // Ici vous devriez demander l'ID de l'utilisateur
+    // Pour l'instant, on simule avec un utilisateur par défaut
+    final userId = 'user001'; // À remplacer par l'ID réel de l'utilisateur
+
+    try {
+      final result = await _apiService.createEmprunt(_book!.id, userId);
+      
+      if (result['success'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('"${_book!.title}" emprunté avec succès'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+        
+        // Recharger les données du livre
+        _loadBook();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Erreur lors de l\'emprunt'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erreur: $e'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
       );
     }
-    
-    final totalCopies = book.copies ?? 1;
-    final availableCopies = book.available ? totalCopies : 0;
-    final borrowedCopies = totalCopies - availableCopies;
-    
+  }
+
+  void _editBook() {
+    if (_book != null) {
+      context.go('/admin/books/edit/${_book!.id}');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       body: SafeArea(
         child: Column(
           children: [
-            // Header identique à BooksAdminPage
+            // Header
             _buildHeader(context),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Bouton retour
-                    TextButton.icon(
-                      onPressed: () => context.go('/admin/books'),
-                      icon: const Icon(Icons.arrow_back, size: 16, color: Color(0xFF64748B)),
-                      label: const Text(
-                        'Retour aux livres',
+            
+            if (_isLoading)
+              Expanded(
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const CircularProgressIndicator(),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Chargement des détails du livre...',
                         style: TextStyle(color: Color(0xFF64748B)),
                       ),
-                    ),
-                    
-                    const SizedBox(height: 16),
-                    
-                    // Carte principale
-                    Card(
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(
-                          color: const Color(0xFFE2E8F0).withOpacity(0.4),
-                          width: 1,
-                        ),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(24.0),
-                        child: Column(
-                          children: [
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Couverture du livre
-                                Container(
-                                  width: 128,
-                                  height: 176,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFE2E8F0),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Icon(
-                                    Icons.book,
-                                    size: 48,
-                                    color: const Color.fromARGB(255, 44, 80, 164),
-                                  ),
-                                ),
-                                
-                                const SizedBox(width: 24),
-                                
-                                // Informations du livre
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  book.title,
-                                                  style: const TextStyle(
-                                                    fontSize: 24,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: Color(0xFF0F172A),
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 8),
-                                                Text(
-                                                  book.author,
-                                                  style: const TextStyle(
-                                                    fontSize: 16,
-                                                    color: Color(0xFF64748B),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 12,
-                                              vertical: 6,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: book.available
-                                                  ? Colors.green
-                                                  : Colors.red,
-                                              borderRadius: BorderRadius.circular(20),
-                                            ),
-                                            child: Text(
-                                              book.available ? 'Disponible' : 'Indisponible',
-                                              style: const TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w500,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      
-                                      const SizedBox(height: 24),
-                                      
-                                      // Grille d'informations
-                                      GridView.count(
-                                        crossAxisCount: 2,
-                                        shrinkWrap: true,
-                                        physics: const NeverScrollableScrollPhysics(),
-                                        childAspectRatio: 3,
-                                        crossAxisSpacing: 16,
-                                        mainAxisSpacing: 12,
-                                        children: [
-                                          _buildInfoItem('ID', book.id),
-                                          _buildInfoItem('Catégorie', book.category),
-                                          _buildInfoItem('Année', book.year),
-                                          _buildInfoItem('Exemplaires', totalCopies.toString()),
-                                        ],
-                                      ),
-                                      
-                                      const SizedBox(height: 24),
-                                      
-                                      // Boutons d'action
-                                      Row(
-                                        children: [
-                                          ElevatedButton.icon(
-                                            onPressed: () {
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                const SnackBar(
-                                                  content: Text('Fonction d\'édition à venir'),
-                                                ),
-                                              );
-                                            },
-                                            icon: const Icon(Icons.edit, size: 18),
-                                            label: const Text('Modifier'),
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor: const Color.fromARGB(255, 44, 80, 164),
-                                              foregroundColor: Colors.white,
-                                              padding: const EdgeInsets.symmetric(
-                                                horizontal: 20,
-                                                vertical: 12,
-                                              ),
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius: BorderRadius.circular(8),
-                                              ),
-                                            ),
-                                          ),
-                                          
-                                          const SizedBox(width: 12),
-                                          
-                                          ElevatedButton.icon(
-                                            onPressed: () {
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                SnackBar(
-                                                  content: const Text('Livre supprimé avec succès'),
-                                                  backgroundColor: Colors.green,
-                                                ),
-                                              );
-                                              Future.delayed(const Duration(milliseconds: 500), () {
-                                                context.go('/admin/books');
-                                              });
-                                            },
-                                            icon: const Icon(Icons.delete, size: 18),
-                                            label: const Text('Supprimer'),
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor: Colors.red,
-                                              foregroundColor: Colors.white,
-                                              padding: const EdgeInsets.symmetric(
-                                                horizontal: 20,
-                                                vertical: 12,
-                                              ),
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius: BorderRadius.circular(8),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                            
-                            const SizedBox(height: 24),
-                            Divider(
-                              color: const Color(0xFFE2E8F0).withOpacity(0.8),
-                            ),
-                            const SizedBox(height: 16),
-                            
-                            // Description
-                            const Align(
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                'Description',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFF0F172A),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Align(
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                book.description ?? 'Aucune description disponible',
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  color: Color(0xFF64748B),
-                                  height: 1.6,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    
-                    const SizedBox(height: 20),
-                    
-                    // Statistiques de disponibilité
-                    Card(
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(
-                          color: const Color(0xFFE2E8F0).withOpacity(0.4),
-                          width: 1,
-                        ),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(24.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Disponibilité',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF0F172A),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceAround,
-                              children: [
-                                _buildStatItem(
-                                  'Exemplaires total',
-                                  totalCopies.toString(),
-                                  const Color.fromARGB(255, 44, 80, 164),
-                                ),
-                                _buildStatItem(
-                                  'Disponibles',
-                                  availableCopies.toString(),
-                                  Colors.green,
-                                ),
-                                _buildStatItem(
-                                  'En prêt',
-                                  borrowedCopies.toString(),
-                                  Colors.red,
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    
-                    const SizedBox(height: 20),
-                    
-                    // Emprunts en cours (simulé)
-                    Card(
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(
-                          color: const Color(0xFFE2E8F0).withOpacity(0.4),
-                          width: 1,
-                        ),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(24.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Emprunts en cours',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF0F172A),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            ..._getCurrentLoans().map((loan) {
-                              return Container(
-                                margin: const EdgeInsets.only(bottom: 12),
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFF8FAFC),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: const Color(0xFFE2E8F0).withOpacity(0.6),
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.all(8),
-                                          decoration: BoxDecoration(
-                                            color: Colors.white,
-                                            shape: BoxShape.circle,
-                                          ),
-                                          child: Icon(
-                                            Icons.person,
-                                            size: 18,
-                                            color: const Color.fromARGB(255, 44, 80, 164),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              loan['user']!,
-                                              style: const TextStyle(
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w500,
-                                                color: Color(0xFF0F172A),
-                                              ),
-                                            ),
-                                            Text(
-                                              'Emprunté le ${loan['date']}',
-                                              style: const TextStyle(
-                                                fontSize: 12,
-                                                color: Color(0xFF64748B),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                    Column(
-                                      crossAxisAlignment: CrossAxisAlignment.end,
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 4,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: loan['status'] == 'En retard'
-                                                ? Colors.red.withOpacity(0.1)
-                                                : const Color.fromARGB(255, 44, 80, 164).withOpacity(0.1),
-                                            borderRadius: BorderRadius.circular(4),
-                                          ),
-                                          child: Text(
-                                            loan['status']!,
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: loan['status'] == 'En retard'
-                                                  ? Colors.red
-                                                  : const Color.fromARGB(255, 44, 80, 164),
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          'Retour: ${loan['dueDate']}',
-                                          style: const TextStyle(
-                                            fontSize: 12,
-                                            color: Color(0xFF64748B),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }).toList(),
-                          ],
-                        ),
-                      ),
-                    ),
-                    
-                    const SizedBox(height: 20),
-                    
-                    // Historique des emprunts (simulé)
-                    Card(
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(
-                          color: const Color(0xFFE2E8F0).withOpacity(0.4),
-                          width: 1,
-                        ),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(24.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Historique des emprunts',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF0F172A),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            ..._getLoanHistory().map((item) {
-                              return Container(
-                                margin: const EdgeInsets.only(bottom: 12),
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: const Color(0xFFE2E8F0),
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Icon(
-                                          Icons.check_circle,
-                                          color: Colors.green,
-                                          size: 20,
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              item['user']!,
-                                              style: const TextStyle(
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w500,
-                                                color: Color(0xFF0F172A),
-                                              ),
-                                            ),
-                                            Text(
-                                              '${item['date']} - ${item['returnDate']}',
-                                              style: const TextStyle(
-                                                fontSize: 12,
-                                                color: Color(0xFF64748B),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 4,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        border: Border.all(
-                                          color: const Color(0xFFE2E8F0),
-                                        ),
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                      child: const Text(
-                                        'Retourné',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Color(0xFF64748B),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }).toList(),
-                          ],
-                        ),
-                      ),
-                    ),
-                    
-                    const SizedBox(height: 32),
-                  ],
+                    ],
+                  ),
                 ),
+              )
+            else if (_error != null || _book == null)
+              Expanded(
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                      const SizedBox(height: 16),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 32),
+                        child: Text(
+                          _error ?? 'Livre non trouvé',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.red),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: () => context.go('/admin/books'),
+                        child: const Text('Retour aux livres'),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else
+              Expanded(
+                child: _buildBookDetail(_book!),
               ),
-            ),
           ],
         ),
       ),
       bottomNavigationBar: _buildBottomNav(),
     );
   }
-  
-  List<Map<String, String>> _getCurrentLoans() {
-    return [
-      {'user': 'Cheikh Fall', 'date': '20/03/2025', 'dueDate': '03/04/2025', 'status': 'En cours'},
-      {'user': 'Mariama Sy', 'date': '18/03/2025', 'dueDate': '01/04/2025', 'status': 'En cours'},
-      {'user': 'Ibrahima Sarr', 'date': '10/03/2025', 'dueDate': '24/03/2025', 'status': 'En retard'},
-    ];
+
+  Widget _buildBookDetail(Book book) {
+    final totalCopies = book.copies ?? 1;
+    final availableCopies = book.available ? totalCopies : 0;
+    final borrowedCopies = totalCopies - availableCopies;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Bouton retour
+          TextButton.icon(
+            onPressed: () => context.go('/admin/books'),
+            icon: const Icon(Icons.arrow_back, size: 16, color: Color(0xFF64748B)),
+            label: const Text(
+              'Retour aux livres',
+              style: TextStyle(color: Color(0xFF64748B)),
+            ),
+          ),
+          
+          const SizedBox(height: 16),
+          
+          // Carte principale
+          Card(
+            elevation: 2,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(
+                color: const Color(0xFFE2E8F0).withOpacity(0.4),
+                width: 1,
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Couverture du livre
+                      Container(
+                        width: 128,
+                        height: 176,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE2E8F0),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          Icons.book,
+                          size: 48,
+                          color: const Color.fromARGB(255, 44, 80, 164),
+                        ),
+                      ),
+                      
+                      const SizedBox(width: 24),
+                      
+                      // Informations du livre
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        book.title,
+                                        style: const TextStyle(
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF0F172A),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        book.author,
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          color: Color(0xFF64748B),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: book.available
+                                        ? Colors.green
+                                        : Colors.red,
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    book.available ? 'Disponible' : 'Indisponible',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            
+                            const SizedBox(height: 24),
+                            
+                            // Grille d'informations
+                            GridView.count(
+                              crossAxisCount: 2,
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              childAspectRatio: 3,
+                              crossAxisSpacing: 16,
+                              mainAxisSpacing: 12,
+                              children: [
+                                _buildInfoItem('ID', book.id),
+                                _buildInfoItem('Catégorie', book.categoryName),
+                                _buildInfoItem('Année', book.year),
+                                _buildInfoItem('Exemplaires', totalCopies.toString()),
+                              ],
+                            ),
+                            
+                            const SizedBox(height: 24),
+                            
+                            // Boutons d'action
+                            Row(
+                              children: [
+                                ElevatedButton.icon(
+                                  onPressed: _editBook,
+                                  icon: const Icon(Icons.edit, size: 18),
+                                  label: const Text('Modifier'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color.fromARGB(255, 44, 80, 164),
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 20,
+                                      vertical: 12,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                ),
+                                
+                                const SizedBox(width: 12),
+                                
+                                if (book.canBeBorrowed)
+                                  ElevatedButton.icon(
+                                    onPressed: _borrowBook,
+                                    icon: const Icon(Icons.bookmark_add, size: 18),
+                                    label: const Text('Emprunter'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.green,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 20,
+                                        vertical: 12,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                    ),
+                                  ),
+                                
+                                const SizedBox(width: 12),
+                                
+                                ElevatedButton.icon(
+                                  onPressed: _isDeleting ? null : _deleteBook,
+                                  icon: _isDeleting
+                                      ? const SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: Colors.white,
+                                          ),
+                                        )
+                                      : const Icon(Icons.delete, size: 18),
+                                  label: _isDeleting
+                                      ? const Text('Suppression...')
+                                      : const Text('Supprimer'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.red,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 20,
+                                      vertical: 12,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  
+                  const SizedBox(height: 24),
+                  Divider(
+                    color: const Color(0xFFE2E8F0).withOpacity(0.8),
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Description
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Description',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      book.description?.isNotEmpty == true
+                          ? book.description!
+                          : 'Aucune description disponible',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Color(0xFF64748B),
+                        height: 1.6,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          
+          const SizedBox(height: 20),
+          
+          // Statistiques de disponibilité
+          Card(
+            elevation: 2,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(
+                color: const Color(0xFFE2E8F0).withOpacity(0.4),
+                width: 1,
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Disponibilité',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildStatItem(
+                        'Exemplaires total',
+                        totalCopies.toString(),
+                        const Color.fromARGB(255, 44, 80, 164),
+                      ),
+                      _buildStatItem(
+                        'Disponibles',
+                        availableCopies.toString(),
+                        Colors.green,
+                      ),
+                      _buildStatItem(
+                        'En prêt',
+                        borrowedCopies.toString(),
+                        Colors.red,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          
+          const SizedBox(height: 20),
+          
+          // Note: Les sections "Emprunts en cours" et "Historique des emprunts"
+          // devraient être récupérées depuis l'API via des appels supplémentaires
+          // Pour l'instant, elles sont simulées
+          _buildLoanHistory(),
+          
+          const SizedBox(height: 32),
+        ],
+      ),
+    );
   }
-  
-  List<Map<String, String>> _getLoanHistory() {
-    return [
-      {'user': 'Amadou Diallo', 'date': '15/03/2025', 'returnDate': '29/03/2025'},
-      {'user': 'Fatou Sall', 'date': '01/03/2025', 'returnDate': '15/03/2025'},
-      {'user': 'Moussa Ndiaye', 'date': '10/02/2025', 'returnDate': '24/02/2025'},
-      {'user': 'Aïssatou Ba', 'date': '05/02/2025', 'returnDate': '19/02/2025'},
-    ];
+
+  Widget _buildLoanHistory() {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: const Color(0xFFE2E8F0).withOpacity(0.4),
+          width: 1,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Informations de prêt',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF0F172A),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Pour voir les emprunts actuels et l\'historique, '
+              'veuillez consulter la section "Emprunts" du dashboard.',
+              style: TextStyle(
+                fontSize: 14,
+                color: Color(0xFF64748B),
+                height: 1.6,
+              ),
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton(
+              onPressed: () => context.go('/admin/emprunts'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color.fromARGB(255, 44, 80, 164),
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Voir les emprunts'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
   
   Widget _buildInfoItem(String label, String value) {
@@ -648,12 +656,11 @@ class _BookDetailPageState extends State<BookDetailPage> {
             ),
           ),
           const Spacer(),
-         NotificationIconWithBadge(),
-
+          NotificationIconWithBadge(),
           IconButton(
             icon: const Icon(Icons.settings_outlined),
             color: const Color(0xFF64748B),
-            onPressed: () => context.go('/profiladmin'), // Ajouter cette ligne
+            onPressed: () => context.go('/profiladmin'),
           ),
         ],
       ),

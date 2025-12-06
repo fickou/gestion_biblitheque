@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../models/book.dart';
 import '../components/book_card.dart';
+import '../services/api_service.dart';
 
 class CataloguePage extends StatefulWidget {
   const CataloguePage({super.key});
@@ -11,23 +12,81 @@ class CataloguePage extends StatefulWidget {
 }
 
 class _CataloguePageState extends State<CataloguePage> {
-  // ignore: unused_field
+  final ApiService _apiService = ApiService();
   String _searchQuery = '';
-  List<Book> _filteredBooks = Book.catalogueBooks;
+  List<Book> _filteredBooks = [];
+  List<Book> _allBooks = [];
+  bool _isLoading = true;
+  String _errorMessage = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBooks();
+  }
+
+  Future<void> _loadBooks() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = '';
+    });
+
+    try {
+      final books = await _apiService.getBooks();
+      setState(() {
+        _allBooks = books;
+        _filteredBooks = books;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Erreur lors du chargement des livres: $e';
+        _isLoading = false;
+      });
+      print('Erreur lors du chargement des livres: $e');
+    }
+  }
 
   void _handleSearch(String query) {
     setState(() {
       _searchQuery = query;
       if (query.trim().isEmpty) {
-        _filteredBooks = Book.catalogueBooks;
+        _filteredBooks = _allBooks;
       } else {
-        _filteredBooks = Book.catalogueBooks.where((book) {
+        _filteredBooks = _allBooks.where((book) {
           return book.title.toLowerCase().contains(query.toLowerCase()) ||
                  book.author.toLowerCase().contains(query.toLowerCase()) ||
-                 book.category.toLowerCase().contains(query.toLowerCase());
+                 (book.category != null && 
+                  book.category!.name.toLowerCase().contains(query.toLowerCase()));
         }).toList();
       }
     });
+  }
+
+  Future<void> _handleSearchApi(String query) async {
+    if (query.trim().isEmpty) {
+      _loadBooks();
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _searchQuery = query;
+    });
+
+    try {
+      final books = await _apiService.searchBooks(query);
+      setState(() {
+        _filteredBooks = books;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Erreur lors de la recherche: $e';
+        _isLoading = false;
+      });
+      print('Erreur lors de la recherche: $e');
+    }
   }
 
   void _handleBookClick(String bookId) {
@@ -35,10 +94,17 @@ class _CataloguePageState extends State<CataloguePage> {
   }
 
   void _showFilters() {
+    final categories = _allBooks
+        .map((book) => book.category)
+        .whereType<String>()
+        .toSet()
+        .toList();
+
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       builder: (context) => Container(
-        padding: EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -47,27 +113,90 @@ class _CataloguePageState extends State<CataloguePage> {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF0F172A),
+                color: const Color(0xFF0F172A),
               ),
             ),
-            SizedBox(height: 16),
-            // TODO: Implémenter les filtres
-            Text(
-              'Fonctionnalité de filtres à implémenter',
-              style: TextStyle(
-                color: Color(0xFF64748B),
+            const SizedBox(height: 16),
+            
+            // Filtre par disponibilité
+            ListTile(
+              leading: const Icon(Icons.check_circle_outline, color: Color(0xFF64748B)),
+              title: const Text('Disponibilité'),
+              subtitle: const Text('Afficher seulement les livres disponibles'),
+              trailing: Switch(
+                value: false,
+                onChanged: (value) {
+                  // TODO: Implémenter le filtre de disponibilité
+                },
               ),
             ),
-            SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color.fromARGB(255, 44, 80, 164),
-                foregroundColor: Colors.white,
-                minimumSize: Size(double.infinity, 48),
-              ),
-              child: Text('Fermer'),
+            
+            // Filtre par catégorie
+            ExpansionTile(
+              leading: const Icon(Icons.category_outlined, color: Color(0xFF64748B)),
+              title: const Text('Catégories'),
+              children: categories.isEmpty
+                  ? [
+                      const Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Text('Aucune catégorie disponible'),
+                      )
+                    ]
+                  : categories.map((category) {
+                      return CheckboxListTile(
+                        value: false,
+                        onChanged: (value) {
+                          // TODO: Implémenter le filtre par catégorie
+                        },
+                        title: Text(category),
+                      );
+                    }).toList(),
             ),
+            
+            // Filtre par auteur
+            ListTile(
+              leading: const Icon(Icons.person_outline, color: Color(0xFF64748B)),
+              title: const Text('Auteurs'),
+              subtitle: const Text('Filtrer par auteur'),
+              trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+              onTap: () {
+                // TODO: Implémenter le filtre par auteur
+              },
+            ),
+            
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      side: const BorderSide(color: Color(0xFFE2E8F0)),
+                    ),
+                    child: const Text('Annuler'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      // TODO: Appliquer les filtres
+                      Navigator.of(context).pop();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color.fromARGB(255, 44, 80, 164),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: const Text('Appliquer'),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: MediaQuery.of(context).viewInsets.bottom),
           ],
         ),
       ),
@@ -77,7 +206,7 @@ class _CataloguePageState extends State<CataloguePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFF8FAFC),
+      backgroundColor: const Color(0xFFF8FAFC),
       body: SafeArea(
         child: Column(
           children: [
@@ -86,28 +215,113 @@ class _CataloguePageState extends State<CataloguePage> {
             
             // Contenu principal
             Expanded(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.all(16),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: 448),
-                  child: Column(
-                    children: [
-                      // En-tête avec compteur et bouton filtre
-                      _buildHeaderSection(),
-                      SizedBox(height: 16),
-                      
-                      // Liste des livres
-                      _buildBooksList(),
-                    ],
-                  ),
-                ),
+              child: _isLoading
+                  ? _buildLoadingIndicator()
+                  : _errorMessage.isNotEmpty && _filteredBooks.isEmpty
+                      ? _buildErrorWidget()
+                      : SingleChildScrollView(
+                          padding: const EdgeInsets.all(16),
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 448),
+                            child: Column(
+                              children: [
+                                // En-tête avec compteur et bouton filtre
+                                _buildHeaderSection(),
+                                const SizedBox(height: 16),
+                                
+                                // Liste des livres
+                                _buildBooksList(),
+                              ],
+                            ),
+                          ),
+                        ),
+            ),
+          ],
+        ),
+      ),
+      floatingActionButton: _errorMessage.isNotEmpty && _filteredBooks.isEmpty
+          ? FloatingActionButton(
+              onPressed: _loadBooks,
+              backgroundColor: const Color.fromARGB(255, 44, 80, 164),
+              child: const Icon(Icons.refresh, color: Colors.white),
+            )
+          : null,
+      // Barre de navigation inférieure
+      bottomNavigationBar: _buildBottomNav(),
+    );
+  }
+
+  Widget _buildLoadingIndicator() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const CircularProgressIndicator(
+            color: Color.fromARGB(255, 44, 80, 164),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Chargement des livres...',
+            style: TextStyle(
+              fontSize: 16,
+              color: const Color(0xFF64748B),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorWidget() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 64,
+              color: const Color(0xFFEF4444),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Erreur de chargement',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF0F172A),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _errorMessage,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: const Color(0xFF64748B),
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: _loadBooks,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color.fromARGB(255, 44, 80, 164),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.refresh, size: 20),
+                  SizedBox(width: 8),
+                  Text('Réessayer'),
+                ],
               ),
             ),
           ],
         ),
       ),
-      // Barre de navigation inférieure
-      bottomNavigationBar: _buildBottomNav(),
     );
   }
 
@@ -120,11 +334,11 @@ class _CataloguePageState extends State<CataloguePage> {
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
             blurRadius: 4,
-            offset: Offset(0, 2),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-      padding: EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
       child: Column(
         children: [
           Row(
@@ -134,33 +348,52 @@ class _CataloguePageState extends State<CataloguePage> {
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Color.fromARGB(255, 44, 80, 164),
+                  color: const Color.fromARGB(255, 44, 80, 164),
                 ),
               ),
-              Spacer(),
+              const Spacer(),
               IconButton(
-                icon: Icon(Icons.notifications_outlined),
-                color: Color(0xFF64748B),
-                onPressed: () {},
+                icon: const Icon(Icons.refresh_outlined),
+                color: const Color(0xFF64748B),
+                onPressed: _loadBooks,
+                tooltip: 'Rafraîchir',
               ),
             ],
           ),
-          SizedBox(height: 12),
+          const SizedBox(height: 12),
           // Barre de recherche
-          TextField(
-            onChanged: _handleSearch,
-            decoration: InputDecoration(
-              hintText: 'Rechercher un livre...',
-              hintStyle: TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
-              prefixIcon: Icon(Icons.search, color: Color(0xFF64748B)),
-              filled: true,
-              fillColor: Color(0xFFF1F5F9),
-              contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide.none,
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  onChanged: _handleSearch,
+                  decoration: InputDecoration(
+                    hintText: 'Rechercher un livre...',
+                    hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
+                    prefixIcon: const Icon(Icons.search, color: Color(0xFF64748B)),
+                    filled: true,
+                    fillColor: const Color(0xFFF1F5F9),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
               ),
-            ),
+              if (_searchQuery.isNotEmpty)
+                IconButton(
+                  icon: const Icon(Icons.clear),
+                  color: const Color(0xFF64748B),
+                  onPressed: () {
+                    setState(() {
+                      _searchQuery = '';
+                      _filteredBooks = _allBooks;
+                    });
+                  },
+                  tooltip: 'Effacer la recherche',
+                ),
+            ],
           ),
         ],
       ),
@@ -177,32 +410,55 @@ class _CataloguePageState extends State<CataloguePage> {
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: Color(0xFF0F172A),
+            color: const Color(0xFF0F172A),
           ),
         ),
-        OutlinedButton(
-          onPressed: _showFilters,
-          style: OutlinedButton.styleFrom(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
+        if (_errorMessage.isNotEmpty && _filteredBooks.isNotEmpty)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFFBEB),
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: const Color(0xFFF59E0B)),
             ),
-            side: BorderSide(color: Color(0xFFE2E8F0)),
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.filter_list, size: 16, color: Color(0xFF64748B)),
-              SizedBox(width: 8),
-              Text(
-                'Filtres',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Color(0xFF64748B),
+            child: Row(
+              children: [
+                const Icon(Icons.warning, size: 14, color: Color(0xFFF59E0B)),
+                const SizedBox(width: 4),
+                Text(
+                  'Données partielles',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: const Color(0xFF92400E),
+                  ),
                 ),
+              ],
+            ),
+          )
+        else
+          OutlinedButton(
+            onPressed: _showFilters,
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
               ),
-            ],
+              side: const BorderSide(color: Color(0xFFE2E8F0)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.filter_list, size: 16, color: Color(0xFF64748B)),
+                const SizedBox(width: 8),
+                Text(
+                  'Filtres',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: const Color(0xFF64748B),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
       ],
     );
   }
@@ -216,10 +472,10 @@ class _CataloguePageState extends State<CataloguePage> {
     return Column(
       children: _filteredBooks.map((book) {
         return Padding(
-          padding: EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.only(bottom: 12),
           child: BookCard(
             book: book,
-            onTap: () => _handleBookClick(book.id),
+            onTap: () => _handleBookClick(book.id ?? ''),
           ),
         );
       }).toList(),
@@ -229,30 +485,51 @@ class _CataloguePageState extends State<CataloguePage> {
   /// État vide quand aucun livre n'est trouvé
   Widget _buildEmptyState() {
     return Container(
-      padding: EdgeInsets.symmetric(vertical: 48),
+      padding: const EdgeInsets.symmetric(vertical: 48),
       child: Column(
         children: [
           Icon(
-            Icons.search_off,
+            _searchQuery.isNotEmpty ? Icons.search_off : Icons.menu_book_outlined,
             size: 64,
-            color: Color(0xFF94A3B8),
+            color: const Color(0xFF94A3B8),
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           Text(
-            'Aucun livre trouvé.',
+            _searchQuery.isNotEmpty 
+                ? 'Aucun livre ne correspond à votre recherche.'
+                : 'Aucun livre disponible.',
             style: TextStyle(
               fontSize: 16,
-              color: Color(0xFF64748B),
+              color: const Color(0xFF64748B),
             ),
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Text(
-            'Essayez avec d\'autres termes de recherche.',
+            _searchQuery.isNotEmpty
+                ? 'Essayez avec d\'autres termes de recherche.'
+                : 'Les livres seront bientôt ajoutés au catalogue.',
             style: TextStyle(
               fontSize: 14,
-              color: Color(0xFF94A3B8),
+              color: const Color(0xFF94A3B8),
             ),
           ),
+          if (_searchQuery.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    _searchQuery = '';
+                    _filteredBooks = _allBooks;
+                  });
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color.fromARGB(255, 44, 80, 164),
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Afficher tous les livres'),
+              ),
+            ),
         ],
       ),
     );
@@ -267,7 +544,7 @@ class _CataloguePageState extends State<CataloguePage> {
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
             blurRadius: 8,
-            offset: Offset(0, -2),
+            offset: const Offset(0, -2),
           ),
         ],
       ),
@@ -291,12 +568,12 @@ class _CataloguePageState extends State<CataloguePage> {
         },
         type: BottomNavigationBarType.fixed,
         backgroundColor: Colors.white,
-        selectedItemColor: Color.fromARGB(255, 44, 80, 164),
-        unselectedItemColor: Color(0xFF64748B),
+        selectedItemColor: const Color.fromARGB(255, 44, 80, 164),
+        unselectedItemColor: const Color(0xFF64748B),
         selectedFontSize: 12,
         unselectedFontSize: 12,
         elevation: 0,
-        items: [
+        items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.home_outlined),
             activeIcon: Icon(Icons.home),

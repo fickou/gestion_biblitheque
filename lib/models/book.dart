@@ -1,13 +1,18 @@
-// lib/models/book.dart
+// lib/models/book.dart - SANS DONNÉES STATIQUES
+import 'category.dart';
+
 class Book {
   final String id;
   final String title;
   final String author;
   final bool available;
-  final String category;
+  final Category? category; // Rendre nullable
   final String year;
   final String? description;
-  final int? copies;
+  final int copies;
+  final String? isbn;
+  final DateTime? createdAt; // Rendre nullable
+  final DateTime? updatedAt; // Rendre nullable
   final String? borrowDate;
   final String? returnDate;
   final String? status;
@@ -18,183 +23,182 @@ class Book {
     required this.title,
     required this.author,
     required this.available,
-    required this.category,
+    this.category, // Optionnel
     required this.year,
     this.description,
-    this.copies,
+    required this.copies,
+    this.isbn,
+    this.createdAt, // Optionnel
+    this.updatedAt, // Optionnel
     this.borrowDate,
     this.returnDate,
     this.status,
     this.reserveDate,
   });
 
-  // Données pour le dashboard (nouveautés et populaires)
-  static final List<Book> newBooks = [
-    Book(
-      id: "1",
-      title: "Introduction à Python",
-      author: "J. Dupont",
-      available: true,
-      category: "Informatique",
-      year: "2023",
-      description: "Un guide complet pour apprendre les bases de la programmation Python.",
-      copies: 2,
-    ),
-    Book(
-      id: "2",
-      title: "Mathématiques Appliquées",
-      author: "M. Martin",
-      available: true,
-      category: "Mathématiques",
-      year: "2022",
-      description: "Mathématiques pour les sciences appliquées.",
-      copies: 1,
-    ),
-    Book(
-      id: "3",
-      title: "Physique Quantique",
-      author: "A. Bernard",
-      available: false,
-      category: "Physique",
-      year: "2021",
-      description: "Introduction à la physique quantique moderne.",
-      copies: 0,
-    ),
-    Book(
-      id: "4",
-      title: "Chimie Organique",
-      author: "L. Petit",
-      available: true,
-      category: "Chimie",
-      year: "2023",
-      description: "Fondamentaux de la chimie organique.",
-      copies: 3,
-    ),
-  ];
-
-  static final List<Book> popularBooks = [
-    Book(
-      id: "5",
-      title: "Algorithmique Avancée",
-      author: "P. Dubois",
-      available: true,
-      category: "Informatique",
-      year: "2023",
-      description: "Algorithmes avancés et structures de données.",
-      copies: 2,
-    ),
-    Book(
-      id: "6",
-      title: "Base de Données",
-      author: "S. Laurent",
-      available: false,
-      category: "Informatique",
-      year: "2022",
-      description: "Conception et gestion de bases de données.",
-      copies: 0,
-    ),
-    Book(
-      id: "7",
-      title: "Intelligence Artificielle",
-      author: "R. Thomas",
-      available: true,
-      category: "Informatique",
-      year: "2024",
-      description: "Introduction à l'intelligence artificielle moderne.",
-      copies: 1,
-    ),
-  ];
-
-  // Données pour le catalogue
-  static final List<Book> catalogueBooks = [
-    Book(id: "1", title: "Introduction à Python", author: "J. Dupont", available: true, category: "Informatique", year: "2023"),
-    Book(id: "2", title: "Mathématiques Appliquées", author: "M. Martin", available: true, category: "Mathématiques", year: "2022"),
-    Book(id: "3", title: "Physique Quantique", author: "A. Bernard", available: false, category: "Physique", year: "2021"),
-    Book(id: "4", title: "Chimie Organique", author: "L. Petit", available: true, category: "Chimie", year: "2023"),
-    Book(id: "5", title: "Algorithmique Avancée", author: "P. Dubois", available: true, category: "Informatique", year: "2023"),
-    Book(id: "6", title: "Base de Données", author: "S. Laurent", available: false, category: "Informatique", year: "2022"),
-    Book(id: "7", title: "Intelligence Artificielle", author: "R. Thomas", available: true, category: "Informatique", year: "2024"),
-    Book(id: "8", title: "Biologie Moléculaire", author: "C. Moreau", available: true, category: "Biologie", year: "2023"),
-  ];
-
-  // Données pour les emprunts
-  static final List<Book> emprunts = [
-    Book(
-      id: "1",
-      title: "Introduction à Python",
-      author: "J. Dupont",
-      available: false,
-      category: "Informatique",
-      year: "2023",
-      borrowDate: "2025-01-05",
-      returnDate: "2025-02-05",
-      status: "En cours",
-    ),
-    Book(
-      id: "2",
-      title: "Base de Données",
-      author: "S. Laurent",
-      available: false,
-      category: "Informatique",
-      year: "2022",
-      borrowDate: "2024-12-20",
-      returnDate: "2025-01-10",
-      status: "En retard",
-    ),
-    Book(
-      id: "3",
-      title: "Intelligence Artificielle",
-      author: "R. Thomas",
-      available: false,
-      category: "Informatique",
-      year: "2024",
-      borrowDate: "2025-01-08",
-      returnDate: "2025-02-08",
-      status: "En cours",
-    ),
-  ];
-
-  // Données pour les réservations
-  static final List<Book> reservations = [
-    Book(
-      id: "1",
-      title: "Physique Quantique",
-      author: "A. Bernard",
-      available: false,
-      category: "Physique",
-      year: "2021",
-      reserveDate: "2025-01-10",
-      status: "En attente",
-    ),
-    Book(
-      id: "2",
-      title: "Chimie Organique",
-      author: "L. Petit",
-      available: false,
-      category: "Chimie",
-      year: "2023",
-      reserveDate: "2025-01-08",
-      status: "Disponible",
-    ),
-  ];
-
-  get availableCopies => null;
-
-  get isbn => null;
-
-  // Méthode utilitaire pour récupérer un livre par son ID
-  static Book? getBookById(String id) {
-    // Chercher d'abord dans newBooks et popularBooks qui ont les descriptions
-    final allBooksWithDescription = [...newBooks, ...popularBooks, ...emprunts, ...reservations];
+  factory Book.fromJson(Map<String, dynamic> json) {
+    // Extraction sécurisée
+    final String id = (json['id'] ?? '').toString();
+    final String title = (json['title'] ?? '').toString();
+    final String author = (json['author'] ?? '').toString();
+    final bool available = json['available'] == true || json['available'] == 1;
+    final String year = (json['year'] ?? '').toString();
+    final String? description = json['description']?.toString();
+    final int copies = (json['copies'] is int) 
+        ? json['copies'] 
+        : int.tryParse(json['copies']?.toString() ?? '0') ?? 0;
+    final String? isbn = json['isbn']?.toString();
+    final String? borrowDate = json['borrowDate']?.toString();
+    final String? returnDate = json['returnDate']?.toString();
+    final String? status = json['status']?.toString();
+    final String? reserveDate = json['reserveDate']?.toString();
+    
+    // Gestion de la catégorie
+    Category? category;
     try {
-      return allBooksWithDescription.firstWhere((book) => book.id == id);
-    } catch (e) {
-      // Si pas trouvé, chercher dans catalogueBooks
-      try {
-        return catalogueBooks.firstWhere((book) => book.id == id);
-      } catch (e) {
-        return null;
+      if (json['category'] != null) {
+        if (json['category'] is Map<String, dynamic>) {
+          category = Category.fromJson(json['category'] as Map<String, dynamic>);
+        } else if (json['category'] is Map) {
+          category = Category.fromJson(Map<String, dynamic>.from(json['category']));
+        }
+      } else if (json['categoryName'] != null) {
+        category = Category(
+          id: (json['categoryId'] ?? '').toString(),
+          name: (json['categoryName'] ?? '').toString(),
+          description: (json['categoryDescription'] ?? '').toString(),
+        );
       }
+    } catch (e) {
+      print('Erreur création catégorie dans Book: $e');
     }
+    
+    // Gestion des dates
+    DateTime? createdAt;
+    DateTime? updatedAt;
+    
+    try {
+      if (json['createdAt'] != null) {
+        final dateStr = json['createdAt'].toString();
+        if (dateStr.isNotEmpty) {
+          createdAt = DateTime.tryParse(dateStr);
+        }
+      }
+      
+      if (json['updatedAt'] != null) {
+        final dateStr = json['updatedAt'].toString();
+        if (dateStr.isNotEmpty) {
+          updatedAt = DateTime.tryParse(dateStr);
+        }
+      }
+    } catch (e) {
+      print('Erreur parsing dates dans Book: $e');
+    }
+
+    return Book(
+      id: id,
+      title: title,
+      author: author,
+      available: available,
+      category: category,
+      year: year,
+      description: description,
+      copies: copies,
+      isbn: isbn,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+      borrowDate: borrowDate,
+      returnDate: returnDate,
+      status: status,
+      reserveDate: reserveDate,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'title': title,
+      'author': author,
+      'available': available,
+      'category': category?.toJson(),
+      'year': year,
+      'description': description,
+      'copies': copies,
+      'isbn': isbn,
+      'createdAt': createdAt?.toIso8601String(),
+      'updatedAt': updatedAt?.toIso8601String(),
+      'borrowDate': borrowDate,
+      'returnDate': returnDate,
+      'status': status,
+      'reserveDate': reserveDate,
+    };
+  }
+
+  Map<String, dynamic> toDatabase() {
+    return {
+      'id': id,
+      'title': title,
+      'author': author,
+      'available': available ? 1 : 0,
+      'categoryId': category?.id ?? '',
+      'year': year,
+      'description': description,
+      'copies': copies,
+      'isbn': isbn,
+      'createdAt': createdAt?.toIso8601String(),
+      'updatedAt': updatedAt?.toIso8601String(),
+    };
+  }
+
+  // Getters utiles
+  int get availableCopies => copies;
+  bool get canBeBorrowed => available && copies > 0;
+  bool get canBeReserved => !available || copies == 0;
+  bool get isValid => id.isNotEmpty && title.isNotEmpty && author.isNotEmpty;
+  
+  String get displayTitle => title;
+  String get displayAuthor => author;
+  String get displayYear => year.isNotEmpty ? year : 'N/A';
+  String get categoryName => category?.name ?? 'Non catégorisé';
+  
+  String get categoryIcon {
+    final catName = category?.name?.toLowerCase() ?? '';
+    if (catName.contains('info')) return '💻';
+    if (catName.contains('math')) return '📐';
+    if (catName.contains('physique')) return '⚛️';
+    if (catName.contains('chimie')) return '🧪';
+    if (catName.contains('biologie')) return '🧬';
+    if (catName.contains('littérature')) return '📚';
+    if (catName.contains('histoire')) return '📜';
+    if (catName.contains('économie')) return '💰';
+    return '📖';
+  }
+
+  String? get formattedCreatedAt {
+    if (createdAt == null) return null;
+    return '${createdAt!.day}/${createdAt!.month}/${createdAt!.year}';
+  }
+
+  String? get formattedUpdatedAt {
+    if (updatedAt == null) return null;
+    return '${updatedAt!.day}/${updatedAt!.month}/${updatedAt!.year}';
+  }
+
+  // Méthode factory pour un livre vide
+  factory Book.empty() {
+    return Book(
+      id: '',
+      title: '',
+      author: '',
+      available: false,
+      category: null,
+      year: '',
+      copies: 0,
+    );
+  }
+
+  @override
+  String toString() {
+    return 'Book{id: $id, title: $title, author: $author, available: $available}';
   }
 }

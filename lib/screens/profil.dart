@@ -4,6 +4,8 @@ import '../models/user.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
+  
+  get currentUser => null;
 
   void _handleLogout(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(

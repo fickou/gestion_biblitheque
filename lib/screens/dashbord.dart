@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../models/book.dart';
 import '../models/quick_action.dart';
+import '../models/user.dart';
+import '../models/role.dart';
+import '../services/api_service.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({Key? key}) : super(key: key);
@@ -11,41 +14,114 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
-  // ignore: unused_field
+  final ApiService _apiService = ApiService();
   String _searchQuery = '';
-
-  final List<Book> newBooks = Book.newBooks;
-  final List<Book> popularBooks = Book.popularBooks;
+  List<Book> _newBooks = [];
+  List<Book> _popularBooks = [];
+  bool _isLoading = true;
+  String _errorMessage = '';
+  User? _currentUser;
 
   final List<QuickAction> quickActions = [
     QuickAction(
       icon: Icons.menu_book,
       label: 'Catalogue',
-      color: Color.fromARGB(255, 44, 80, 164),
+      color: const Color.fromARGB(255, 44, 80, 164),
       route: '/catalogue',
     ),
     QuickAction(
       icon: Icons.description,
       label: 'Mes emprunts',
-      color: Color.fromARGB(221, 248, 190, 45),
+      color: const Color.fromARGB(221, 248, 190, 45),
       route: '/emprunts',
     ),
     QuickAction(
       icon: Icons.access_time,
       label: 'Réservations',
-      color: Color(0xFF10B981),
+      color: const Color(0xFF10B981),
       route: '/reservations',
     ),
     QuickAction(
       icon: Icons.person,
       label: 'Profil',
-      color: Color(0xFFF59E0B),
+      color: const Color(0xFFF59E0B),
       route: '/profil',
     ),
   ];
 
+  @override
+  void initState() {
+    super.initState();
+    _loadDashboardData();
+  }
+
+  Future<void> _loadDashboardData() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = '';
+    });
+
+    try {
+      // Charger les informations de l'utilisateur
+      _currentUser = _apiService.currentUser;
+
+      // Charger les livres depuis l'API
+      final books = await _apiService.getBooks();
+      
+      if (books.isNotEmpty) {
+        // Filtrer les livres valides
+        final validBooks = books.where((book) => book.isValid).toList();
+        
+        // Trier par date de création (plus récents en premier)
+        validBooks.sort((a, b) {
+          final aDate = a.createdAt ?? DateTime(2000);
+          final bDate = b.createdAt ?? DateTime(2000);
+          return bDate.compareTo(aDate);
+        });
+        
+        // Prendre les 4 plus récents comme "nouveautés"
+        final newBooksCount = validBooks.length >= 4 ? 4 : validBooks.length;
+        final List<Book> newBooks = validBooks.sublist(0, newBooksCount);
+        
+        // Pour les "populaires", prendre les suivants ou les disponibles
+        final List<Book> popularBooks = validBooks.length > newBooksCount
+            ? validBooks.sublist(
+                newBooksCount,
+                newBooksCount + (validBooks.length - newBooksCount > 4 ? 4 : validBooks.length - newBooksCount)
+              )
+            : [];
+        
+        setState(() {
+          _newBooks = newBooks;
+          _popularBooks = popularBooks;
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Erreur lors du chargement des données: $e';
+        _isLoading = false;
+      });
+      print('Erreur lors du chargement du dashboard: $e');
+    }
+  }
+
+  Future<void> _handleSearch(String query) async {
+    setState(() {
+      _searchQuery = query;
+    });
+
+    if (query.trim().isNotEmpty) {
+      // Naviguer vers le catalogue avec la recherche
+      context.go('/catalogue?search=$query');
+    }
+  }
+
   void _handleBookClick(String id) {
-    // Utilisation de GoRouter
     context.go('/livre/$id');
   }
 
@@ -58,34 +134,165 @@ class _DashboardPageState extends State<DashboardPage> {
           children: [
             _buildAppHeader(),
             Expanded(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 448),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildQuickActionsSection(),
-                        const SizedBox(height: 24),
-                        _buildNewBooksSection(),
-                        const SizedBox(height: 24),
-                        _buildPopularBooksSection(),
-                        const SizedBox(height: 24),
-                        _buildWelcomeCard(),
-                        const SizedBox(height: 24),
-                      ],
-                    ),
-                  ),
-                ),
+              child: _isLoading
+                  ? _buildLoadingIndicator()
+                  : _errorMessage.isNotEmpty && _newBooks.isEmpty && _popularBooks.isEmpty
+                      ? _buildErrorWidget()
+                      : SingleChildScrollView(
+                          physics: const BouncingScrollPhysics(),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 448),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (_errorMessage.isNotEmpty && (_newBooks.isNotEmpty || _popularBooks.isNotEmpty))
+                                    _buildWarningBanner(),
+                                  
+                                  _buildQuickActionsSection(),
+                                  const SizedBox(height: 24),
+                                  
+                                  if (_newBooks.isNotEmpty) ...[
+                                    _buildNewBooksSection(),
+                                    const SizedBox(height: 24),
+                                  ],
+                                  
+                                  if (_popularBooks.isNotEmpty) ...[
+                                    _buildPopularBooksSection(),
+                                    const SizedBox(height: 24),
+                                  ],
+                                  
+                                  _buildWelcomeCard(),
+                                  const SizedBox(height: 24),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+            ),
+          ],
+        ),
+      ),
+      floatingActionButton: _errorMessage.isNotEmpty && _newBooks.isEmpty && _popularBooks.isEmpty
+          ? FloatingActionButton(
+              onPressed: _loadDashboardData,
+              backgroundColor: const Color.fromARGB(255, 44, 80, 164),
+              child: const Icon(Icons.refresh, color: Colors.white),
+            )
+          : null,
+      bottomNavigationBar: _buildBottomNav(),
+    );
+  }
+
+  Widget _buildLoadingIndicator() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const CircularProgressIndicator(
+            color: Color.fromARGB(255, 44, 80, 164),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Chargement du dashboard...',
+            style: TextStyle(
+              fontSize: 16,
+              color: const Color(0xFF64748B),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorWidget() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 64,
+              color: const Color(0xFFEF4444),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Erreur de chargement',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF0F172A),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _errorMessage,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: const Color(0xFF64748B),
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: _loadDashboardData,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color.fromARGB(255, 44, 80, 164),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.refresh, size: 20),
+                  SizedBox(width: 8),
+                  Text('Réessayer'),
+                ],
               ),
             ),
           ],
         ),
       ),
-      bottomNavigationBar: _buildBottomNav(),
+    );
+  }
+
+  Widget _buildWarningBanner() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFBEB),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFF59E0B)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.warning, size: 20, color: Color(0xFFF59E0B)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              _errorMessage,
+              style: const TextStyle(
+                fontSize: 12,
+                color: Color(0xFF92400E),
+              ),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close, size: 16),
+            color: const Color(0xFF92400E),
+            onPressed: () {
+              setState(() {
+                _errorMessage = '';
+              });
+            },
+          ),
+        ],
+      ),
     );
   }
 
@@ -119,34 +326,58 @@ class _DashboardPageState extends State<DashboardPage> {
               IconButton(
                 icon: const Icon(Icons.notifications_outlined),
                 color: const Color(0xFF64748B),
-                onPressed: () {},
+                onPressed: () {
+                  // TODO: Implémenter les notifications
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.refresh_outlined),
+                color: const Color(0xFF64748B),
+                onPressed: _loadDashboardData,
+                tooltip: 'Rafraîchir',
               ),
             ],
           ),
           const SizedBox(height: 12),
-          TextField(
-            onChanged: (value) => setState(() => _searchQuery = value),
-            decoration: InputDecoration(
-              hintText: 'Rechercher un livre...',
-              hintStyle:
-                  const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
-              prefixIcon: const Icon(Icons.search, color: Color(0xFF64748B)),
-              filled: true,
-              fillColor: const Color(0xFFF1F5F9),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide.none,
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  onChanged: _handleSearch,
+                  controller: TextEditingController(text: _searchQuery),
+                  decoration: InputDecoration(
+                    hintText: 'Rechercher un livre...',
+                    hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
+                    prefixIcon: const Icon(Icons.search, color: Color(0xFF64748B)),
+                    filled: true,
+                    fillColor: const Color(0xFFF1F5F9),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
               ),
-            ),
+              if (_searchQuery.isNotEmpty)
+                IconButton(
+                  icon: const Icon(Icons.clear),
+                  color: const Color(0xFF64748B),
+                  onPressed: () {
+                    setState(() {
+                      _searchQuery = '';
+                    });
+                  },
+                  tooltip: 'Effacer la recherche',
+                ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  /// ⚡ Section Actions rapides - CORRIGÉE
+  /// ⚡ Section Actions rapides
   Widget _buildQuickActionsSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -181,7 +412,6 @@ class _DashboardPageState extends State<DashboardPage> {
 
   Widget _buildQuickActionCard(QuickAction action) {
     return InkWell(
-      // CORRECTION: Utilisation de context.go() au lieu de Navigator.pushNamed
       onTap: () => context.go(action.route),
       child: Container(
         decoration: BoxDecoration(
@@ -228,9 +458,9 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget _buildNewBooksSection() {
     return Column(
       children: [
-        _buildSectionHeader('Nouveautés'),
+        _buildSectionHeader('Nouveautés', '/catalogue?filter=new'),
         const SizedBox(height: 16),
-        _buildBookCarousel(newBooks),
+        _buildBookCarousel(_newBooks),
       ],
     );
   }
@@ -239,15 +469,15 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget _buildPopularBooksSection() {
     return Column(
       children: [
-        _buildSectionHeader('Livres populaires'),
+        _buildSectionHeader('Livres populaires', '/catalogue?filter=popular'),
         const SizedBox(height: 16),
-        _buildBookCarousel(popularBooks),
+        _buildBookCarousel(_popularBooks),
       ],
     );
   }
 
-  /// 🧩 En-tête de section - CORRIGÉ
-  Widget _buildSectionHeader(String title) {
+  /// 🧩 En-tête de section
+  Widget _buildSectionHeader(String title, String route) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -260,8 +490,7 @@ class _DashboardPageState extends State<DashboardPage> {
           ),
         ),
         InkWell(
-          // CORRECTION: Utilisation de context.go()
-          onTap: () => context.go('/catalogue'),
+          onTap: () => context.go(route),
           child: const Text(
             'Voir tout',
             style: TextStyle(
@@ -276,12 +505,54 @@ class _DashboardPageState extends State<DashboardPage> {
 
   /// 🎠 Carrousel de livres
   Widget _buildBookCarousel(List<Book> books) {
+    if (books.isEmpty) {
+      return _buildEmptyBookSection();
+    }
+
     return SizedBox(
       height: 230,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: books.length,
         itemBuilder: (context, index) => _buildBookCard(books[index]),
+      ),
+    );
+  }
+
+  Widget _buildEmptyBookSection() {
+    return Container(
+      height: 230,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.menu_book_outlined,
+              size: 48,
+              color: Color(0xFFCBD5E1),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Aucun livre disponible',
+              style: TextStyle(
+                fontSize: 16,
+                color: const Color(0xFF64748B),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Les livres seront bientôt ajoutés',
+              style: TextStyle(
+                fontSize: 14,
+                color: const Color(0xFF94A3B8),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -307,7 +578,7 @@ class _DashboardPageState extends State<DashboardPage> {
         ),
         child: Column(
           children: [
-            // Image/icone du livre
+            // Section image/icône
             Container(
               height: 120,
               width: double.infinity,
@@ -318,10 +589,28 @@ class _DashboardPageState extends State<DashboardPage> {
                   topRight: Radius.circular(8),
                 ),
               ),
-              child: const Center(
-                child: Icon(Icons.menu_book,
-                    size: 48,
-                    color: Color.fromARGB(255, 44, 80, 164)),
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      book.categoryIcon,
+                      style: const TextStyle(fontSize: 36),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      book.categoryName,
+                      style: const TextStyle(
+                        fontSize: 10,
+                        color: Color.fromARGB(255, 44, 80, 164),
+                        fontWeight: FontWeight.w500,
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
               ),
             ),
             // Contenu texte
@@ -334,9 +623,10 @@ class _DashboardPageState extends State<DashboardPage> {
                     Text(
                       book.title,
                       style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF0F172A)),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF0F172A),
+                      ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -344,14 +634,15 @@ class _DashboardPageState extends State<DashboardPage> {
                     Text(
                       book.author,
                       style: const TextStyle(
-                          fontSize: 12, color: Color(0xFF64748B)),
+                        fontSize: 12,
+                        color: Color(0xFF64748B),
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     const Spacer(),
                     Container(
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: book.available
                             ? const Color(0xFF10B981).withOpacity(0.1)
@@ -381,6 +672,10 @@ class _DashboardPageState extends State<DashboardPage> {
 
   /// 🎉 Carte de bienvenue
   Widget _buildWelcomeCard() {
+    final userName = _currentUser?.name ?? 'Étudiant';
+    final userEmail = _currentUser?.email ?? '';
+    final userRole = _currentUser?.role;
+    
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
@@ -396,25 +691,86 @@ class _DashboardPageState extends State<DashboardPage> {
         borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 8,
-              offset: const Offset(0, 4))
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
-      child: const Column(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Bienvenue à la Bibliothèque UFR SAT',
-            style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.white),
+            'Bienvenue, $userName!',
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
           ),
-          SizedBox(height: 8),
-          Text(
+          if (userEmail.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              userEmail,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.white70,
+              ),
+            ),
+          ],
+          const SizedBox(height: 8),
+          const Text(
             'Cherchez un livre, réservez et empruntez facilement depuis votre smartphone.',
-            style: TextStyle(fontSize: 14, color: Colors.white70, height: 1.5),
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.white70,
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              if (userRole != null && userRole.name.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    userRole.name.toUpperCase(),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              if (_apiService.isAuthenticated) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10B981).withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.verified, size: 12, color: Colors.white),
+                      SizedBox(width: 4),
+                      Text(
+                        'Connecté',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.white,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
           ),
         ],
       ),
@@ -423,34 +779,50 @@ class _DashboardPageState extends State<DashboardPage> {
 
   /// 🧭 Barre de navigation inférieure
   Widget _buildBottomNav() {
-    return BottomNavigationBar(
-      currentIndex: _getCurrentIndex(context),
-      onTap: (index) => _onItemTapped(index, context),
-      type: BottomNavigationBarType.fixed,
-      selectedItemColor: const Color.fromARGB(255, 44, 80, 164),
-      unselectedItemColor: const Color(0xFF64748B),
-      items: const [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.home_outlined),
-          activeIcon: Icon(Icons.home),
-          label: 'Accueil',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.search_outlined),
-          activeIcon: Icon(Icons.search),
-          label: 'Catalogue',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.description_outlined),
-          activeIcon: Icon(Icons.description),
-          label: 'Emprunts',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.person_outline),
-          activeIcon: Icon(Icons.person),
-          label: 'Profil',
-        ),
-      ],
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: BottomNavigationBar(
+        currentIndex: _getCurrentIndex(context),
+        onTap: (index) => _onItemTapped(index, context),
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: Colors.white,
+        selectedItemColor: const Color.fromARGB(255, 44, 80, 164),
+        unselectedItemColor: const Color(0xFF64748B),
+        selectedFontSize: 12,
+        unselectedFontSize: 12,
+        elevation: 0,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_outlined),
+            activeIcon: Icon(Icons.home),
+            label: 'Accueil',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.search_outlined),
+            activeIcon: Icon(Icons.search),
+            label: 'Catalogue',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.description_outlined),
+            activeIcon: Icon(Icons.description),
+            label: 'Emprunts',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            activeIcon: Icon(Icons.person),
+            label: 'Profil',
+          ),
+        ],
+      ),
     );
   }
 
