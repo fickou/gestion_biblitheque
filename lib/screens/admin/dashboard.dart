@@ -106,6 +106,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     return AdminDashboardData.categoryStatsFromApi(data);
   }
 
+  // ignore: unused_element
   IconData _getActivityIcon(String type) {
     switch (type.toLowerCase()) {
       case 'emprunt':
@@ -121,6 +122,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     }
   }
 
+  // ignore: unused_element
   Color _getActivityColor(String type) {
     switch (type.toLowerCase()) {
       case 'emprunt':

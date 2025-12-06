@@ -228,7 +228,7 @@ class _BookDetailPageState extends State<BookDetailPage> {
   }
 
   Widget _buildBookDetail(Book book) {
-    final totalCopies = book.copies ?? 1;
+    final totalCopies = book.copies;
     final availableCopies = book.available ? totalCopies : 0;
     final borrowedCopies = totalCopies - availableCopies;
 

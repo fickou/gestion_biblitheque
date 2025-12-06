@@ -162,7 +162,7 @@ class Book {
   String get categoryName => category?.name ?? 'Non catégorisé';
   
   String get categoryIcon {
-    final catName = category?.name?.toLowerCase() ?? '';
+    final catName = category?.name.toLowerCase() ?? '';
     if (catName.contains('info')) return '💻';
     if (catName.contains('math')) return '📐';
     if (catName.contains('physique')) return '⚛️';

@@ -389,7 +389,7 @@ class _BooksAdminPageState extends State<BooksAdminPage> {
 
     return Column(
       children: displayedBooks.map((book) {
-        final totalCopies = book.copies ?? 1;
+        final totalCopies = book.copies;
         final availableCopies = book.available ? totalCopies : 0;
         
         return Card(

@@ -211,7 +211,7 @@ class ApiService {
   Future<Map<String, dynamic>> updateBook(Book book) async {
     try {
       final response = await http.put(
-        ApiConfig.getBookUri(book.id ?? ''),
+        ApiConfig.getBookUri(book.id),
         headers: _getAuthHeaders(),
         body: jsonEncode(book.toDatabase()),
       );

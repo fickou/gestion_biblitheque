@@ -35,9 +35,10 @@ class _EmpruntsPageState extends State<EmpruntsPage> {
     try {
       _currentUser = _apiService.currentUser;
       
+      // ignore: unnecessary_null_comparison
       if (_currentUser != null && _currentUser!.id != null) {
         // Charger les emprunts de l'utilisateur
-        final userEmprunts = await _apiService.getUserEmprunts(_currentUser!.id!);
+        final userEmprunts = await _apiService.getUserEmprunts(_currentUser!.id);
         
         // Séparer les emprunts actifs et en retard
         final activeEmprunts = userEmprunts.where((e) => !e.isLate).toList();
@@ -140,12 +141,14 @@ class _EmpruntsPageState extends State<EmpruntsPage> {
   }
 
   // Fonction pour formater la date de manière lisible
+  // ignore: unused_element
   String _formatDate(DateTime? date) {
     if (date == null) return 'Non spécifiée';
     return '${date.day}/${date.month}/${date.year}';
   }
 
   // Fonction pour calculer les jours restants
+  // ignore: unused_element
   String _getRemainingDays(DateTime? returnDate) {
     if (returnDate == null) return '';
     

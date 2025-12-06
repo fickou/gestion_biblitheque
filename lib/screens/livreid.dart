@@ -91,7 +91,7 @@ class _LivreDetailPageState extends State<LivreDetailPage> {
     try {
       final result = await _apiService.createReservation(
         _book!.id,
-        _currentUser!.id!,
+        _currentUser!.id,
       );
 
       if (result['success'] == true) {
@@ -138,7 +138,7 @@ class _LivreDetailPageState extends State<LivreDetailPage> {
     try {
       final result = await _apiService.createEmprunt(
         _book!.id,
-        _currentUser!.id!,
+        _currentUser!.id,
       );
 
       if (result['success'] == true) {

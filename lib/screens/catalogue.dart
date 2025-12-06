@@ -63,6 +63,7 @@ class _CataloguePageState extends State<CataloguePage> {
     });
   }
 
+  // ignore: unused_element
   Future<void> _handleSearchApi(String query) async {
     if (query.trim().isEmpty) {
       _loadBooks();
@@ -475,7 +476,7 @@ class _CataloguePageState extends State<CataloguePage> {
           padding: const EdgeInsets.only(bottom: 12),
           child: BookCard(
             book: book,
-            onTap: () => _handleBookClick(book.id ?? ''),
+            onTap: () => _handleBookClick(book.id),
           ),
         );
       }).toList(),

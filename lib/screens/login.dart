@@ -56,8 +56,9 @@ class _LoginState extends State<Login> {
         final user = _apiService.currentUser;
         
         // Déterminer la route de redirection
+        print(  'user role: ${user?.role.name}');
         String redirectPath;
-        if (user?.role == 'Administrateur' || user?.role == 'Bibliothécaire') {
+        if (user?.role.name == 'Administrateur' || user?.role.name == 'Bibliothécaire') {
           redirectPath = '/admin/dashboard';
         } else {
           redirectPath = '/dashboard';
@@ -96,6 +97,7 @@ class _LoginState extends State<Login> {
     }
   }
 
+  // ignore: unused_element
   void _handleGuestLogin() async {
     setState(() => _isLoading = true);
     

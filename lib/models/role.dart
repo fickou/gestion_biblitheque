@@ -1,5 +1,4 @@
 // lib/models/role.dart
-import 'dart:convert';
 
 class Role {
   final String id;
