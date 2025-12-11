@@ -6,7 +6,7 @@ import 'package:gestion_bibliotheque/models/notif.dart';
 class NotificationIconWithBadge extends StatelessWidget {
   final NotificationsService notificationsService = NotificationsService();
 
-  NotificationIconWithBadge({Key? key}) : super(key: key);
+  NotificationIconWithBadge({super.key});
 
   @override
   Widget build(BuildContext context) {

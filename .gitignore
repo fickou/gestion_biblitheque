@@ -11,17 +11,50 @@
 .svn/
 .swiftpm/
 migrate_working_dir/
+*.lock
+*.sublime-*
+*.bak
+*.backup
+*.tmp
+*.temp
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.pid
+*.seed
+*.pid.lock
+*.tgz
+.cache/
+.htaccess
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
 # IntelliJ related
 *.iml
 *.ipr
 *.iws
 .idea/
+out/
+modules.xml
+.idea/modules.xml
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/dictionaries
+.idea/libraries
+*.orig
+.shelf/
 
 # The .vscode folder contains launch configuration and tasks you configure in
 # VS Code which you may wish to be included in version control, so this line
 # is commented out by default.
-#.vscode/
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
 
 # Flutter/Dart/Pub related
 **/doc/api/
@@ -34,6 +67,19 @@ migrate_working_dir/
 /coverage/
 /lib/firebase_options.dart
 firebase.json
+.flutter-plugins
+.packages
+pubspec.lock
+.flutter/
+.flutter_tool.state
+.gradle/
+.angular/
+.dart-code/
+.dart-server/
+.metadata/
+packages/
+!.packages
+pubspec_overrides.yaml
 
 # Symbolication related
 app.*.symbols
@@ -45,3 +91,339 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Android/IntelliJ
+/android/local.properties
+/android/.gradle
+/android/captures/
+/android/gradlew
+/android/gradlew.bat
+/android/key.properties
+/android/.idea/workspace.xml
+/android/.idea/libraries
+/android/.idea/navEditor.xml
+
+# iOS
+/ios/.generated/
+/ios/Flutter/Generated.xcconfig
+/ios/Flutter/flutter_export_environment.sh
+/ios/ServiceDefinitions.json
+/ios/Runner/GeneratedPluginRegistrant.*
+
+# Web
+/web/
+
+# Windows
+/windows/flutter/generated_plugin_registrant.cc
+/windows/flutter/generated_plugins.cmake
+
+# Linux
+/linux/flutter/generated_plugin_registrant.cc
+/linux/flutter/generated_plugins.cmake
+
+# macOS
+/macos/Flutter/GeneratedPluginRegistrant.swift
+
+# Exceptions
+!pubspec.yaml
+!analysis_options.yaml
+!.gitignore
+!.metadata
+!README.md
+!LICENSE
+
+# Firebase
+.firebase/
+firebase-debug.log
+**/google-services.json
+**/GoogleService-Info.plist
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots
+fastlane/test_output
+
+# Coverage
+lcov.info
+*.lcov
+
+# Visual Studio Code
+!.vscode/settings.json
+!.vscode/launch.json
+.vscode/launch.json
+.vscode/settings.json
+.vscode/!settings.json
+
+# Mobile device files
+**/*.mobileprovision
+**/*.ipa
+**/*.apk
+**/*.aab
+
+# Flutter build outputs
+.flutter-plugins
+.flutter-plugins-dependencies
+.flutter/
+build/
+web/
+
+# Test coverage
+.coverage/
+coverage/
+*.coverage
+*.coverage.*
+
+# Package files
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# Logs and databases
+*.log
+*.sql
+*.sqlite
+*.db
+
+# Backup files
+*.bak
+*.backup
+*.old
+*.orig
+
+# System files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Application specific files
+*.p12
+*.pem
+*.der
+*.pfx
+*.key
+*.crt
+*.csr
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*
+
+# IDE specific files
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+.project
+.classpath
+.settings/
+*.sublime-*
+*.code-workspace
+
+# Flutter specific
+**/GeneratedPluginRegistrant.h
+**/GeneratedPluginRegistrant.m
+**/GeneratedPluginRegistrant.swift
+**/GeneratedPluginRegistrant.java
+**/GeneratedPluginRegistrant.kt
+**/GeneratedPluginRegistrant.cc
+**/generated_plugin_registrant.dart
+**/generated_plugin_registrant.h
+**/generated_plugin_registrant.cc
+**/generated_plugin_registrant.dart
+
+# Dart/Flutter pub
+.dart_tool/
+.pub/
+.pub-cache/
+.packages
+pubspec.lock
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# Android
+android/local.properties
+android/.gradle/
+android/app/build/
+android/build/
+android/.idea/
+android/gradle/
+android/gradlew
+android/gradlew.bat
+android/key.properties
+
+# iOS
+ios/Flutter/App.framework/
+ios/Flutter/Flutter.framework/
+ios/Flutter/Flutter.podspec
+ios/Flutter/Generated.xcconfig
+ios/Flutter/flutter_export_environment.sh
+ios/Pods/
+ios/Runner/GeneratedPluginRegistrant.h
+ios/Runner/GeneratedPluginRegistrant.m
+ios/Runner/Assets.car
+ios/Runner/AppIcon.appiconset/
+ios/Runner/Base.lproj/LaunchScreen.storyboardc/
+ios/Runner/Base.lproj/Main.storyboardc/
+ios/Runner/Debug.xcconfig
+ios/Runner/Release.xcconfig
+
+# Web
+web/assets/
+web/favicon.png
+web/icons/
+web/index.html
+web/manifest.json
+
+# Windows
+windows/flutter/ephemeral/
+windows/runner/flutter_window.cpp
+windows/runner/utils.cpp
+windows/runner/win32_window.cpp
+
+# Linux
+linux/flutter/ephemeral/
+linux/my_application.cc
+
+# macOS
+macos/Flutter/Ephemeral/
+macos/Runner/DerivedData/
+
+# Test
+.coverage/
+.coverage.*
+test/.dart_tool/
+test/.packages
+test/.pub/
+test/build/
+test/coverage/
+
+# VS Code
+!.vscode/settings.json
+!.vscode/launch.json
+.vscode/launch.json
+.vscode/settings.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+.project
+.classpath
+.settings/
+*.sublime-*
+*.code-workspace
+
+# Platform specific
+android/app/src/main/res/raw/*
+!android/app/src/main/res/raw/keep
+ios/Runner/Assets.xcassets/AppIcon.appiconset/*
+!ios/Runner/Assets.xcassets/AppIcon.appiconset/keep
+
+# Flutter generated
+.generated/
+generated/
+*.g.dart
+*.gr.dart
+*.freezed.dart
+
+# Build outputs
+build/
+web/
+
+# Package files
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# Logs and databases
+*.log
+*.sql
+*.sqlite
+*.db
+
+# Backup files
+*.bak
+*.backup
+*.old
+*.orig
+
+# System files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Application specific files
+*.p12
+*.pem
+*.der
+*.pfx
+*.key
+*.crt
+*.csr
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*
+
+# IDE specific files
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+.project
+.classpath
+.settings/
+*.sublime-*
+*.code-workspace
+
+# Firebase
+.firebase/
+firebase-debug.log
+**/google-services.json
+**/GoogleService-Info.plist
+firebase.json
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots
+fastlane/test_output
+
+# Coverage
+lcov.info
+*.lcov
+
+# Visual Studio Code
+!.vscode/settings.json
+!.vscode/launch.json
+.vscode/launch.json
+.vscode/settings.json
+.vscode/!settings.json
+
+# Mobile device files
+**/*.mobileprovision
+**/*.ipa
+**/*.apk
+**/*.aab

@@ -4,7 +4,7 @@ import 'package:gestion_bibliotheque/widgets/notif.dart';
 import 'package:go_router/go_router.dart';
 
 class BooksAdminPage extends StatefulWidget {
-  const BooksAdminPage({Key? key}) : super(key: key);
+  const BooksAdminPage({super.key});
 
   @override
   State<BooksAdminPage> createState() => _BooksAdminPageState();
@@ -69,7 +69,7 @@ class _BooksAdminPageState extends State<BooksAdminPage> {
                             Text(
                               'Gestion des livres',
                               style: TextStyle(
-                                fontSize: 28,
+                                fontSize: 20,
                                 fontWeight: FontWeight.bold,
                                 color: const Color(0xFF0F172A),
                               ),
@@ -97,6 +97,7 @@ class _BooksAdminPageState extends State<BooksAdminPage> {
                             ),
                           ),
                           child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
                             children: [
                               Icon(Icons.add, size: 20),
                               SizedBox(width: 8),
@@ -459,7 +460,7 @@ class _BooksAdminPageState extends State<BooksAdminPage> {
                             ),
                           ),
                         );
-                      }).toList(),
+                      }),
                     
                     const SizedBox(height: 80), // Espace pour le bottom navigation
                   ],
@@ -646,11 +647,11 @@ class AddEditBookForm extends StatefulWidget {
   final VoidCallback onCancel;
   
   const AddEditBookForm({
-    Key? key,
+    super.key,
     this.book,
     required this.onSuccess,
     required this.onCancel,
-  }) : super(key: key);
+  });
   
   @override
   State<AddEditBookForm> createState() => _AddEditBookFormState();

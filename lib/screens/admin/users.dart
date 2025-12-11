@@ -110,7 +110,7 @@ class _StudentsPageState extends State<StudentsPage> {
             ),
           ),
           const Spacer(),
-           NotificationIconWithBadge(),
+          NotificationIconWithBadge(),
 
           IconButton(
             icon: const Icon(Icons.settings_outlined),
@@ -197,44 +197,49 @@ class _StudentsPageState extends State<StudentsPage> {
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
             child: Column(
               children: filteredUsers.map((user) {
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: const Color(0xFFE2E8F0),
-                      width: 1,
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      // Mobile layout (column)
-                      LayoutBuilder(
-                        builder: (context, constraints) {
-                          if (constraints.maxWidth < 640) {
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _buildUserInfo(user),
-                                const SizedBox(height: 12),
-                                _buildStatsAndActions(user),
-                              ],
-                            );
-                          } else {
-                            return Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Expanded(child: _buildUserInfo(user)),
-                                _buildStatsAndActions(user),
-                              ],
-                            );
-                          }
-                        },
+                return GestureDetector(
+                    onTap: () {
+                    print('👉 Navigation vers /admin/etudiants/${user['id']}');
+                    context.go('/admin/etudiants/${user['id']}');
+                  },                 child: Container(
+                                      margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: const Color(0xFFE2E8F0),
+                        width: 1,
                       ),
-                    ],
+                    ),
+                    child: Column(
+                      children: [
+                        // Mobile layout (column)
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            if (constraints.maxWidth < 640) {
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _buildUserInfo(user),
+                                  const SizedBox(height: 12),
+                                  _buildStatsAndActions(user),
+                                ],
+                              );
+                            } else {
+                              return Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(child: _buildUserInfo(user)),
+                                  _buildStatsAndActions(user),
+                                ],
+                              );
+                            }
+                          },
+                        ),
+                      ],
+                    ),
                   ),
                 );
               }).toList(),
@@ -245,6 +250,7 @@ class _StudentsPageState extends State<StudentsPage> {
     );
   }
 
+  // AJOUTER CES MÉTHODES MANQUANTES
   Widget _buildUserInfo(Map<String, dynamic> user) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

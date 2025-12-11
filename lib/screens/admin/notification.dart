@@ -78,75 +78,106 @@ class _NotificationsPageState extends State<NotificationsPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Header avec boutons
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Notifications',
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF0F172A),
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '$unreadCount notification${unreadCount > 1 ? 's' : ''} non lue${unreadCount > 1 ? 's' : ''}',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: Color(0xFF64748B),
-                              ),
-                            ),
-                          ],
-                        ),
-                        Row(
-                          children: [
-                            ElevatedButton(
-                              onPressed: handleMarkAllAsRead,
-                              style: ElevatedButton.styleFrom(
-                                foregroundColor: const Color(0xFF64748B),
-                                backgroundColor: Colors.white,
-                                side: const BorderSide(color: Color(0xFFE2E8F0)),
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
-                              child: const Row(
+                    // Header avec boutons - MODIFIÉ POUR ÉVITER LE DÉBORDEMENT
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        if (constraints.maxWidth < 500) {
+                          // Version mobile - boutons en dessous
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Icon(Icons.check_circle, size: 16),
-                                  SizedBox(width: 4),
-                                  Text('Tout marquer'),
+                                  const Text(
+                                    'Notifications',
+                                    style: TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF0F172A),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '$unreadCount notification${unreadCount > 1 ? 's' : ''} non lue${unreadCount > 1 ? 's' : ''}',
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      color: Color(0xFF64748B),
+                                    ),
+                                  ),
                                 ],
                               ),
-                            ),
-                            const SizedBox(width: 8),
-                            ElevatedButton(
-                              onPressed: handleClearAll,
-                              style: ElevatedButton.styleFrom(
-                                foregroundColor: Colors.red,
-                                backgroundColor: Colors.white,
-                                side: const BorderSide(color: Color(0xFFFECACA)),
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
-                              child: const Row(
+                              const SizedBox(height: 16),
+                              Row(
                                 children: [
-                                  Icon(Icons.delete, size: 16),
-                                  SizedBox(width: 4),
-                                  Text('Tout supprimer'),
+                                  Expanded(
+                                    child: _buildCompactButton(
+                                      'Tout marquer',
+                                      Icons.check_circle,
+                                      const Color(0xFF64748B),
+                                      handleMarkAllAsRead,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: _buildCompactButton(
+                                      'Tout supprimer',
+                                      Icons.delete,
+                                      Colors.red,
+                                      handleClearAll,
+                                    ),
+                                  ),
                                 ],
                               ),
-                            ),
-                          ],
-                        ),
-                      ],
+                            ],
+                          );
+                        } else {
+                          // Version desktop - boutons à droite
+                          return Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Notifications',
+                                    style: TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF0F172A),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '$unreadCount notification${unreadCount > 1 ? 's' : ''} non lue${unreadCount > 1 ? 's' : ''}',
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      color: Color(0xFF64748B),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Row(
+                                children: [
+                                  _buildCompactButton(
+                                    'Tout marquer',
+                                    Icons.check_circle,
+                                    const Color(0xFF64748B),
+                                    handleMarkAllAsRead,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  _buildCompactButton(
+                                    'Tout supprimer',
+                                    Icons.delete,
+                                    Colors.red,
+                                    handleClearAll,
+                                  ),
+                                ],
+                              ),
+                            ],
+                          );
+                        }
+                      },
                     ),
                     
                     const SizedBox(height: 24),
@@ -158,60 +189,127 @@ class _NotificationsPageState extends State<NotificationsPage> {
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(color: const Color(0xFFE2E8F0)),
                       ),
-                      child: Row(
-                        children: tabs.map((tab) {
-                          final isActive = activeTab == tab;
-                          final tabLabel = _getTabLabel(tab);
-                          final count = _getTabCount(tab);
-                          
-                          return Expanded(
-                            child: Material(
-                              color: isActive ? const Color.fromARGB(255, 44, 80, 164) : Colors.white,
-                              borderRadius: _getBorderRadiusForTab(tab),
-                              child: InkWell(
-                                onTap: () => setState(() => activeTab = tab),
-                                borderRadius: _getBorderRadiusForTab(tab),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
-                                  decoration: BoxDecoration(
-                                    border: Border(
-                                      right: tab != 'return' ? const BorderSide(color: Color(0xFFE2E8F0)) : BorderSide.none,
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          if (constraints.maxWidth < 400) {
+                            // Version mobile pour les tabs - utilisation de SingleChildScrollView horizontal
+                            return SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Row(
+                                children: tabs.map((tab) {
+                                  final isActive = activeTab == tab;
+                                  final tabLabel = _getTabLabel(tab);
+                                  final count = _getTabCount(tab);
+                                  
+                                  return Container(
+                                    decoration: BoxDecoration(
+                                      border: Border(
+                                        right: tab != 'return' ? const BorderSide(color: Color(0xFFE2E8F0)) : BorderSide.none,
+                                      ),
                                     ),
-                                  ),
-                                  child: Column(
-                                    children: [
-                                      Text(
-                                        tabLabel,
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w500,
-                                          color: isActive ? Colors.white : const Color(0xFF64748B),
+                                    child: Material(
+                                      color: isActive ? const Color.fromARGB(255, 44, 80, 164) : Colors.white,
+                                      borderRadius: _getBorderRadiusForTab(tab),
+                                      child: InkWell(
+                                        onTap: () => setState(() => activeTab = tab),
+                                        borderRadius: _getBorderRadiusForTab(tab),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                                          child: Column(
+                                            children: [
+                                              Text(
+                                                tabLabel,
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w500,
+                                                  color: isActive ? Colors.white : const Color(0xFF64748B),
+                                                ),
+                                              ),
+                                              if (count > 0)
+                                                Container(
+                                                  margin: const EdgeInsets.only(top: 4),
+                                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                  decoration: BoxDecoration(
+                                                    color: isActive ? Colors.white : const Color(0xFFF1F5F9),
+                                                    borderRadius: BorderRadius.circular(10),
+                                                  ),
+                                                  child: Text(
+                                                    '$count',
+                                                    style: TextStyle(
+                                                      fontSize: 10,
+                                                      fontWeight: FontWeight.bold,
+                                                      color: isActive ? const Color.fromARGB(255, 44, 80, 164) : const Color(0xFF475569),
+                                                    ),
+                                                  ),
+                                                ),
+                                            ],
+                                          ),
                                         ),
                                       ),
-                                      if (count > 0)
-                                        Container(
-                                          margin: const EdgeInsets.only(top: 4),
-                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                          decoration: BoxDecoration(
-                                            color: isActive ? Colors.white : const Color(0xFFF1F5F9),
-                                            borderRadius: BorderRadius.circular(10),
-                                          ),
-                                          child: Text(
-                                            '$count',
-                                            style: TextStyle(
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.bold,
-                                              color: isActive ? const Color.fromARGB(255, 44, 80, 164) : const Color(0xFF475569),
-                                            ),
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                            );
+                          } else {
+                            // Version desktop pour les tabs
+                            return Row(
+                              children: tabs.map((tab) {
+                                final isActive = activeTab == tab;
+                                final tabLabel = _getTabLabel(tab);
+                                final count = _getTabCount(tab);
+                                
+                                return Expanded(
+                                  child: Material(
+                                    color: isActive ? const Color.fromARGB(255, 44, 80, 164) : Colors.white,
+                                    borderRadius: _getBorderRadiusForTab(tab),
+                                    child: InkWell(
+                                      onTap: () => setState(() => activeTab = tab),
+                                      borderRadius: _getBorderRadiusForTab(tab),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(vertical: 12),
+                                        decoration: BoxDecoration(
+                                          border: Border(
+                                            right: tab != 'return' ? const BorderSide(color: Color(0xFFE2E8F0)) : BorderSide.none,
                                           ),
                                         ),
-                                    ],
+                                        child: Column(
+                                          children: [
+                                            Text(
+                                              tabLabel,
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w500,
+                                                color: isActive ? Colors.white : const Color(0xFF64748B),
+                                              ),
+                                            ),
+                                            if (count > 0)
+                                              Container(
+                                                margin: const EdgeInsets.only(top: 4),
+                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: isActive ? Colors.white : const Color(0xFFF1F5F9),
+                                                  borderRadius: BorderRadius.circular(10),
+                                                ),
+                                                child: Text(
+                                                  '$count',
+                                                  style: TextStyle(
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: isActive ? const Color.fromARGB(255, 44, 80, 164) : const Color(0xFF475569),
+                                                  ),
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              ),
-                            ),
-                          );
-                        }).toList(),
+                                );
+                              }).toList(),
+                            );
+                          }
+                        },
                       ),
                     ),
                     
@@ -408,6 +506,41 @@ class _NotificationsPageState extends State<NotificationsPage> {
         ),
       ),
       bottomNavigationBar: _buildBottomNav(context),
+    );
+  }
+  
+  // Widget pour créer un bouton compact
+  Widget _buildCompactButton(String text, IconData icon, Color textColor, VoidCallback onPressed) {
+    return ElevatedButton(
+      onPressed: onPressed,
+      style: ElevatedButton.styleFrom(
+        foregroundColor: textColor,
+        backgroundColor: Colors.white,
+        side: BorderSide(color: textColor.withOpacity(0.3)),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        elevation: 0,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              text,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
     );
   }
   

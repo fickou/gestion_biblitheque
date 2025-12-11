@@ -1,5 +1,7 @@
 import 'package:gestion_bibliotheque/screens/admin/notification.dart';
 import 'package:gestion_bibliotheque/screens/admin/profil.dart';
+import 'package:gestion_bibliotheque/screens/admin/reservation.dart';
+import 'package:gestion_bibliotheque/screens/admin/userdetail.dart';
 import 'package:gestion_bibliotheque/screens/admin/users.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -18,7 +20,6 @@ import '../screens/admin/loans.dart';
 
 
 import '../screens/emprunts.dart';
-import '../screens/livreid.dart';
 
 // Router Provider
 final routerProvider = Provider<GoRouter>((ref) {
@@ -99,12 +100,24 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: 'admin_students',
         builder: (context, state) => const StudentsPage(),
       ),
+            // Dans votre configuration de routes (généralement dans main.dart ou router.dart)
       GoRoute(
+        path: '/admin/etudiants/:id',
+        builder: (context, state) => UserDetailPage(
+          id: state.pathParameters['id'] ?? '',
+        ),
+      ),
+            GoRoute(
               path: '/profiladmin', // Route pour le profil
               name: 'profiladmin',
               builder: (context, state) => const AdminProfilePage(), // Page de profil
       ),
-      GoRoute(
+      // Dans votre configuration de routes
+        GoRoute(
+          path: '/admin/reservations',
+          builder: (context, state) => const AdminReservationsPage(),
+        ),
+              GoRoute(
         path: '/profil',
         name: 'profil',
         builder: (context, state) => const ProfilePage(),
