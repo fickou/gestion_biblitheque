@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:gestion_bibliotheque/models/admin_models.dart';
-import 'package:gestion_bibliotheque/widgets/notif.dart';
-import 'package:gestion_bibliotheque/widgets/stat_card.dart';
-import 'package:gestion_bibliotheque/widgets/activity_item.dart';
-import 'package:gestion_bibliotheque/widgets/top_book_card.dart';
+import '/models/admin_models.dart';
+import '/widgets/notif.dart';
+import '/widgets/stat_card.dart';
+import '/widgets/activity_item.dart';
+import '/widgets/top_book_card.dart';
 import 'package:go_router/go_router.dart';
-import '../../services/api_service.dart';
+import '/services/api_service.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});

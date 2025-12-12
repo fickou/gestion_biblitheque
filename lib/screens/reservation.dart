@@ -1,7 +1,7 @@
 // lib/screens/reservations_page.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:gestion_bibliotheque/services/api_service.dart';
+import '../services/api_service.dart';
 
 class ReservationsPage extends StatefulWidget {
   const ReservationsPage({super.key});

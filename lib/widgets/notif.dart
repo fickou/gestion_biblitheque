@@ -1,7 +1,7 @@
 // widgets/notification_icon_with_badge.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:gestion_bibliotheque/models/notif.dart';
+import '/models/notif.dart';
 
 class NotificationIconWithBadge extends StatelessWidget {
   final NotificationsService notificationsService = NotificationsService();

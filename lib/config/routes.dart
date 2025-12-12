@@ -1,8 +1,8 @@
-import 'package:gestion_bibliotheque/screens/admin/notification.dart';
-import 'package:gestion_bibliotheque/screens/admin/profil.dart';
-import 'package:gestion_bibliotheque/screens/admin/reservation.dart';
-import 'package:gestion_bibliotheque/screens/admin/userdetail.dart';
-import 'package:gestion_bibliotheque/screens/admin/users.dart';
+import '/screens/admin/notification.dart';
+import '/screens/admin/profil.dart';
+import '/screens/admin/reservation.dart';
+import '/screens/admin/userdetail.dart';
+import '/screens/admin/users.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../screens/catalogue.dart';

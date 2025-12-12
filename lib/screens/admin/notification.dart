@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:gestion_bibliotheque/models/notif.dart';
+import '/models/notif.dart';
 import 'package:go_router/go_router.dart';
 
 class NotificationsPage extends StatefulWidget {

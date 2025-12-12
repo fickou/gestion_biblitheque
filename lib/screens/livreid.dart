@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:gestion_bibliotheque/models/user.dart';
+import '/models/user.dart';
 import '../models/book.dart';
 import 'package:go_router/go_router.dart';
-import '../services/api_service.dart';
+import '/services/api_service.dart';
 
 class LivreDetailPage extends StatefulWidget {
   final String id;

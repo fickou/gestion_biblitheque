@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:gestion_bibliotheque/models/book.dart';
-import 'package:gestion_bibliotheque/widgets/notif.dart';
+import '/models/book.dart';
+import '/widgets/notif.dart';
 import 'package:go_router/go_router.dart';
-import '../../services/api_service.dart';
+import '/services/api_service.dart';
 
 class BookDetailPage extends StatefulWidget {
   final String id;
@@ -690,7 +690,6 @@ class _BookDetailPageState extends State<BookDetailPage> {
           IconButton(
             icon: const Icon(Icons.settings_outlined),
             color: const Color(0xFF64748B),
-            onPressed: () => context.go('/profiladmin'),
             onPressed: () => context.go('/profiladmin'),
           ),
         ],
