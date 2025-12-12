@@ -1,7 +1,6 @@
 // lib/models/admin_models.dart - SANS DONNÉES STATIQUES
 import 'package:flutter/material.dart';
-import 'emprunt.dart';
-import 'reservation.dart';
+import 'book.dart';
 
 /// Modèle pour les statistiques du dashboard
 class DashboardStat {

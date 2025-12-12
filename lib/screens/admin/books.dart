@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../services/api_service.dart';
 
 class BooksAdminPage extends StatefulWidget {
-  const BooksAdminPage({Key? key}) : super(key: key);
+  const BooksAdminPage({super.key});
 
   @override
   State<BooksAdminPage> createState() => _BooksAdminPageState();

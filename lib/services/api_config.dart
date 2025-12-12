@@ -37,7 +37,7 @@ class Endpoints {
 
 class ApiConfig {
   // IMPORTANT: Correction ici - Votre API utilise index.php
-  static const String baseUrl = 'http://10.0.2.2/library_app/api';
+  static const String baseUrl = 'http://192.168.1.33/library_app/api';
   
   // CORRECTION CLÉ: Votre API attend le paramètre 'request' dans l'URL
   static String getUrl(String endpoint) {

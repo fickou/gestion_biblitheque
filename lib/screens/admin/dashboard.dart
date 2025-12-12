@@ -451,7 +451,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
       elevation: 2,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: const Color(0xFFE2E8F0).withOpacity(0.4), width: 1),
+        side: BorderSide(
+          color: const Color(0xFFE2E8F0).withOpacity(0.4),
+          width: 1,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -523,7 +526,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
       elevation: 2,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: const Color(0xFFE2E8F0).withOpacity(0.4), width: 1),
+        side: BorderSide(
+          color: const Color(0xFFE2E8F0).withOpacity(0.4),
+          width: 1,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -596,7 +602,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
       elevation: 2,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: const Color(0xFFE2E8F0).withOpacity(0.4), width: 1),
+        side: BorderSide(
+          color: const Color(0xFFE2E8F0).withOpacity(0.4),
+          width: 1,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -700,7 +709,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, -2)),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, -2),
+          ),
         ],
       ),
       child: BottomNavigationBar(

@@ -592,7 +592,7 @@ class _BookDetailPageState extends State<BookDetailPage> {
           label,
           style: const TextStyle(
             fontSize: 12,
-            color: Color(0xFF64748B),
+            color: Color(0xFF6B7280),
           ),
         ),
         const SizedBox(height: 4),
@@ -601,15 +601,45 @@ class _BookDetailPageState extends State<BookDetailPage> {
           style: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: Color(0xFF0F172A),
+            color: Color(0xFF111827),
           ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
       ],
     );
   }
   
+  Widget _buildInfoItemMobile(String label, String value) {
+    return SizedBox(
+      width: double.infinity,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              color: Color(0xFF6B7280),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: Color(0xFF111827),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  
   Widget _buildStatItem(String label, String value, Color color) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Text(
           value,
@@ -624,14 +654,14 @@ class _BookDetailPageState extends State<BookDetailPage> {
           label,
           style: const TextStyle(
             fontSize: 12,
-            color: Color(0xFF64748B),
+            color: Color(0xFF6B7280),
           ),
         ),
       ],
     );
   }
   
-  // Header IDENTIQUE à BooksAdminPage
+  // Header
   Widget _buildHeader(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
@@ -661,13 +691,14 @@ class _BookDetailPageState extends State<BookDetailPage> {
             icon: const Icon(Icons.settings_outlined),
             color: const Color(0xFF64748B),
             onPressed: () => context.go('/profiladmin'),
+            onPressed: () => context.go('/profiladmin'),
           ),
         ],
       ),
     );
   }
   
-  // Bottom Navigation IDENTIQUE à BooksAdminPage
+  // Bottom Navigation
   Widget _buildBottomNav() {
     return Container(
       decoration: BoxDecoration(
@@ -722,7 +753,6 @@ class _BookDetailPageState extends State<BookDetailPage> {
   }
   
   int _getCurrentIndex() {
-    // Dans BookDetailPage, nous sommes toujours dans la section "Livres"
     return 1; // Index 1 = Livres
   }
   

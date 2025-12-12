@@ -316,7 +316,6 @@ class _AnimatedFloatingBook extends StatefulWidget {
   final Duration delay;
 
   const _AnimatedFloatingBook({
-    super.key,
     required this.size,
     required this.delay,
   });
