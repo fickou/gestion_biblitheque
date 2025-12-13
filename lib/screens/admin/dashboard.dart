@@ -27,7 +27,45 @@ class _AdminDashboardState extends State<AdminDashboard> {
   @override
   void initState() {
     super.initState();
-    _loadData();
+    _checkAuthAndLoadData();
+  }
+
+  Future<void> _checkAuthAndLoadData() async {
+    // Vérifier d'abord l'authentification
+    if (!_apiService.isAuthenticated) {
+      setState(() {
+        _errorMessage = 'Veuillez vous connecter';
+        _isLoading = false;
+      });
+      
+      // Rediriger vers la page de login après un court délai
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) {
+          context.go('/login');
+        }
+      });
+      return;
+    }
+
+    // Vérifier que l'utilisateur est admin
+    final currentUser = _apiService.currentUser;
+    if (currentUser?.role.name.toLowerCase() != 'admin' && 
+        currentUser?.role.name.toLowerCase() != 'administrateur' && 
+        currentUser?.role.name.toLowerCase() != 'bibliothécaire') {
+      setState(() {
+        _errorMessage = 'Accès réservé aux administrateurs';
+        _isLoading = false;
+      });
+      
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) {
+          context.go('/dashboard'); // Rediriger vers le dashboard utilisateur
+        }
+      });
+      return;
+    }
+
+    await _loadData();
   }
 
   Future<void> _loadData() async {
@@ -37,102 +75,275 @@ class _AdminDashboardState extends State<AdminDashboard> {
     });
 
     try {
-      // Charger les statistiques du dashboard
-      final dashboardResponse = await _apiService.getDashboardStats();
+      print('📊 Chargement des données du dashboard...');
       
-      if (dashboardResponse.isNotEmpty && dashboardResponse.containsKey('success') && dashboardResponse['success'] == true) {
-        setState(() {
-          dashboardData = dashboardResponse;
-        });
-        
-        // Charger les livres populaires
-        final topBooksData = await _apiService.getTopBooks(limit: 5);
-        
-        // Charger les activités récentes
-        final recentActivitiesData = await _apiService.getRecentActivities(limit: 10);
-        
-        // Charger les statistiques par catégorie
-        final categoryStatsData = await _apiService.getCategoryStats();
-        
-        // Mettre à jour les données
-        setState(() {
-          stats = _transformStats(dashboardResponse);
-          recentActivities = _transformRecentActivities(recentActivitiesData);
-          topBooks = _transformTopBooks(topBooksData);
-          categoryStats = _transformCategoryStats(categoryStatsData);
-          _isLoading = false;
-        });
-      } else if (dashboardResponse.containsKey('success') && dashboardResponse['success'] == false) {
-        // Utiliser les données de test si l'API échoue (pour développement)
-        print('API non disponible, utilisation des données de test');
-        final testData = AdminDashboardData.generateTestData();
-        
-        setState(() {
-          stats = AdminDashboardData.statsFromApi(testData['stats']);
-          recentActivities = AdminDashboardData.activitiesFromApi(testData['activities']);
-          topBooks = AdminDashboardData.topBooksFromApi(testData['topBooks']);
-          categoryStats = AdminDashboardData.categoryStatsFromApi(testData['categoryStats']);
-          _isLoading = false;
-          _errorMessage = 'Mode développement : Données de test affichées';
-        });
-      } else {
-        setState(() {
-          _errorMessage = dashboardResponse['message']?.toString() ?? 'Erreur lors du chargement des données';
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
+      // 1. Charger les statistiques du dashboard
+      final dashboardResponse = await _apiService.getDashboardStats();
+      print('✅ Statistiques chargées: ${dashboardResponse.isNotEmpty}');
+      
+      // 2. Charger les livres populaires
+      final topBooksData = await _apiService.getTopBooks(limit: 5);
+      print('✅ Top livres chargés: ${topBooksData.length}');
+      
+      // 3. Charger les activités récentes
+      final recentActivitiesData = await _apiService.getRecentActivities(limit: 10);
+      print('✅ Activités récentes: ${recentActivitiesData.length}');
+      
+      // 4. Charger les statistiques par catégorie
+      final categoryStatsData = await _apiService.getCategoryStats();
+      print('✅ Stats catégories: ${categoryStatsData.length}');
+      
+      // Transformer les données
       setState(() {
-        _errorMessage = 'Erreur de connexion: $e';
+        dashboardData = dashboardResponse;
+        stats = _transformStats(dashboardResponse);
+        topBooks = _transformTopBooks(topBooksData);
+        recentActivities = _transformRecentActivities(recentActivitiesData);
+        categoryStats = _transformCategoryStats(categoryStatsData);
         _isLoading = false;
       });
-      print('Erreur lors du chargement du dashboard: $e');
+      
+      print('🎉 Dashboard chargé avec succès');
+      
+    } catch (e) {
+      print('❌ Erreur lors du chargement du dashboard: $e');
+      
+      // Essayer de charger les données de test
+      _loadTestData();
     }
   }
 
+  void _loadTestData() {
+    print('🔄 Utilisation des données de test...');
+    final testData = AdminDashboardData.generateTestData();
+    
+    setState(() {
+      stats = AdminDashboardData.statsFromApi(testData['stats']);
+      recentActivities = AdminDashboardData.activitiesFromApi(testData['activities']);
+      topBooks = AdminDashboardData.topBooksFromApi(testData['topBooks']);
+      categoryStats = AdminDashboardData.categoryStatsFromApi(testData['categoryStats']);
+      _isLoading = false;
+      _errorMessage = 'Mode développement : Données de test affichées';
+    });
+  }
+
   List<DashboardStat> _transformStats(Map<String, dynamic> data) {
-    return AdminDashboardData.statsFromApi(data);
+    try {
+      if (data.isEmpty) {
+        return AdminDashboardData.generateTestData()['stats']
+            .cast<DashboardStat>();
+      }
+      
+      // Transformer le format API en DashboardStat
+      List<DashboardStat> transformedStats = [];
+      
+      // Total des livres
+      transformedStats.add(DashboardStat(
+        title: 'Livres',
+        value: (data['total_books'] ?? data['books'] ?? '0').toString(),
+        icon: Icons.book,
+        trend: '${data['books_trend'] ?? '0'}%',
+        trendUp: (data['books_trend'] ?? 0) >= 0,
+      ));
+      
+      // Utilisateurs
+      transformedStats.add(DashboardStat(
+        title: 'Utilisateurs',
+        value: (data['total_users'] ?? data['users'] ?? '0').toString(),
+        icon: Icons.people,
+        trend: '${data['users_trend'] ?? '0'}%',
+        trendUp: (data['users_trend'] ?? 0) >= 0,
+      ));
+      
+      // Emprunts actifs
+      transformedStats.add(DashboardStat(
+        title: 'Emprunts actifs',
+        value: (data['active_borrowings'] ?? data['emprunts'] ?? '0').toString(),
+        icon: Icons.description,
+        trend: '${data['borrowings_trend'] ?? '0'}%',
+        trendUp: (data['borrowings_trend'] ?? 0) >= 0,
+      ));
+      
+      // Retours en attente
+      transformedStats.add(DashboardStat(
+        title: 'Retours en attente',
+        value: (data['pending_returns'] ?? data['retours'] ?? '0').toString(),
+        icon: Icons.pending_actions,
+        trend: '${data['returns_trend'] ?? '0'}%',
+        trendUp: (data['returns_trend'] ?? 0) >= 0,
+      ));
+      
+      // Réservations en attente
+      transformedStats.add(DashboardStat(
+        title: 'Réservations',
+        value: (data['pending_reservations'] ?? data['reservations'] ?? '0').toString(),
+        icon: Icons.event_note,
+        trend: '${data['reservations_trend'] ?? '0'}%',
+        trendUp: (data['reservations_trend'] ?? 0) >= 0,
+      ));
+      
+      // Emprunts en retard
+      transformedStats.add(DashboardStat(
+        title: 'En retard',
+        value: (data['late_borrowings'] ?? data['retards'] ?? '0').toString(),
+        icon: Icons.warning,
+        trend: '${data['late_trend'] ?? '0'}%',
+        trendUp: false, // Toujours négatif pour les retards
+      ));
+      
+      return transformedStats;
+    } catch (e) {
+      print('⚠️ Erreur transformation stats: $e');
+      return AdminDashboardData.generateTestData()['stats']
+          .cast<DashboardStat>();
+    }
   }
 
   List<RecentActivity> _transformRecentActivities(List<dynamic> data) {
-    return AdminDashboardData.activitiesFromApi(data);
+    try {
+      if (data.isEmpty) {
+        return AdminDashboardData.generateTestData()['activities']
+            .cast<RecentActivity>();
+      }
+      
+      return data.map<RecentActivity>((item) {
+        if (item is Map<String, dynamic>) {
+          return RecentActivity(
+            icon: _getActivityIcon(item['type']?.toString() ?? ''),
+            title: item['description']?.toString() ?? 
+                   item['title']?.toString() ?? 'Activité',
+            time: item['time']?.toString() ?? 
+                  item['createdAt']?.toString() ?? 'Récemment',
+            iconColor: _getActivityColor(item['type']?.toString() ?? ''),
+            type: item['type']?.toString() ?? '',
+
+          );
+        }
+        return RecentActivity(
+          icon: Icons.info,
+          title: 'Activité système',
+          time: 'Récemment',
+          iconColor: const Color(0xFF6B7280),
+          type: String.fromCharCode(0xFF6B7280)
+        );
+      }).toList();
+    } catch (e) {
+      print('⚠️ Erreur transformation activités: $e');
+      return AdminDashboardData.generateTestData()['activities']
+          .cast<RecentActivity>();
+    }
   }
 
   List<TopBook> _transformTopBooks(List<dynamic> data) {
-    return AdminDashboardData.topBooksFromApi(data);
+    try {
+      if (data.isEmpty) {
+        return AdminDashboardData.generateTestData()['topBooks']
+            .cast<TopBook>();
+      }
+      
+      return data.map<TopBook>((item) {
+        if (item is Map<String, dynamic>) {
+          return TopBook(
+            title: item['title']?.toString() ?? 'Titre inconnu',
+            author: item['author']?.toString() ?? 'Auteur inconnu',
+            loanCount: (item['loan_count'] ?? 
+                       item['borrowings'] ?? 
+                       item['count'] ?? 0).toInt(),
+            id: item['id']?.toString() ?? '',
+            categoryName: item['category_name']?.toString() ?? 
+                          item['category']?.toString() ?? 'Catégorie inconnue',
+            copies: (item['copies'] ?? 0).toInt(),
+            available: (item['available'] ?? false) as bool,
+          );
+        }
+        return TopBook(
+          id: '',
+          title: 'Livre inconnu',
+          author: 'Auteur inconnu',
+          categoryName: 'Catégorie inconnue',
+          copies: 0,
+          available: false,
+          loanCount: 0,
+        );
+      }).toList();
+    } catch (e) {
+      print('⚠️ Erreur transformation top livres: $e');
+      return AdminDashboardData.generateTestData()['topBooks']
+          .cast<TopBook>();
+    }
   }
 
   List<CategoryStat> _transformCategoryStats(List<dynamic> data) {
-    return AdminDashboardData.categoryStatsFromApi(data);
+    try {
+      if (data.isEmpty) {
+        return AdminDashboardData.generateTestData()['categoryStats']
+            .cast<CategoryStat>();
+      }
+      
+      return data.map<CategoryStat>((item) {
+        if (item is Map<String, dynamic>) {
+          return CategoryStat(
+            categoryName: item['category_name']?.toString() ?? 
+                         item['category']?.toString() ?? 'Catégorie',
+            totalBooks: (item['total_books'] ?? 
+                        item['count'] ?? 0).toInt(),
+            availableBooks: (item['available_books'] ?? 
+                           item['available'] ?? 0).toInt(),
+            uniqueBorrowers: (item['unique_borrowers'] ?? 
+                            item['borrowers'] ?? 0).toInt(),
+          );
+        }
+        return CategoryStat(
+          categoryName: 'Catégorie',
+          totalBooks: 0,
+          availableBooks: 0,
+          uniqueBorrowers: 0
+        );
+      }).toList();
+    } catch (e) {
+      print('⚠️ Erreur transformation stats catégories: $e');
+      return AdminDashboardData.generateTestData()['categoryStats']
+          .cast<CategoryStat>();
+    }
   }
 
-  // ignore: unused_element
   IconData _getActivityIcon(String type) {
     switch (type.toLowerCase()) {
       case 'emprunt':
+      case 'borrowing':
         return Icons.check_circle;
       case 'reservation':
         return Icons.person_add;
       case 'retard':
+      case 'late':
         return Icons.access_time;
       case 'new_book':
+      case 'book_added':
         return Icons.add_circle;
+      case 'return':
+      case 'retour':
+        return Icons.assignment_returned;
       default:
         return Icons.info;
     }
   }
 
-  // ignore: unused_element
   Color _getActivityColor(String type) {
     switch (type.toLowerCase()) {
       case 'emprunt':
+      case 'borrowing':
         return const Color(0xFF10B981);
       case 'reservation':
         return const Color(0xFFF59E0B);
       case 'retard':
+      case 'late':
         return const Color(0xFFEF4444);
       case 'new_book':
+      case 'book_added':
         return const Color.fromARGB(255, 44, 80, 164);
+      case 'return':
+      case 'retour':
+        return const Color(0xFF3B82F6);
       default:
         return const Color(0xFF6B7280);
     }
@@ -198,6 +409,17 @@ class _AdminDashboardState extends State<AdminDashboard> {
               color: const Color(0xFF64748B),
             ),
           ),
+          if (_apiService.currentUser != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: Text(
+                'Connecté en tant que ${_apiService.currentUser!.name}',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: const Color(0xFF94A3B8),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -234,21 +456,43 @@ class _AdminDashboardState extends State<AdminDashboard> {
               ),
             ),
             const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: _loadData,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color.fromARGB(255, 44, 80, 164),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.refresh, size: 20),
-                  SizedBox(width: 8),
-                  Text('Réessayer'),
-                ],
-              ),
+            Wrap(
+              spacing: 12,
+              children: [
+                ElevatedButton(
+                  onPressed: _loadData,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color.fromARGB(255, 44, 80, 164),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.refresh, size: 20),
+                      SizedBox(width: 8),
+                      Text('Réessayer'),
+                    ],
+                  ),
+                ),
+                if (!_apiService.isAuthenticated)
+                  ElevatedButton(
+                    onPressed: () => context.go('/login'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF10B981),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.login, size: 20),
+                        SizedBox(width: 8),
+                        Text('Se connecter'),
+                      ],
+                    ),
+                  ),
+              ],
             ),
           ],
         ),
@@ -257,6 +501,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Widget _buildHeader() {
+    final currentUser = _apiService.currentUser;
+    final isAdmin = currentUser?.role.name.toLowerCase() == 'admin' || 
+                   currentUser?.role.name.toLowerCase() == 'administrateur'|| 
+                   currentUser?.role.name.toLowerCase() == 'bibliothécaire';
+    
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -271,20 +520,49 @@ class _AdminDashboardState extends State<AdminDashboard> {
       padding: const EdgeInsets.all(16),
       child: Row(
         children: [
-          Text(
-            'Dashboard Admin',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: const Color.fromARGB(255, 44, 80, 164),
-            ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Dashboard Admin',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: const Color.fromARGB(255, 44, 80, 164),
+                ),
+              ),
+              if (currentUser != null)
+                Text(
+                  '${currentUser.name} ${isAdmin ? '👑' : ''}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: const Color(0xFF64748B),
+                  ),
+                ),
+            ],
           ),
           const Spacer(),
+          if (_apiService.isAuthenticated)
+            IconButton(
+              icon: const Icon(Icons.person),
+              color: const Color.fromARGB(255, 44, 80, 164),
+              onPressed: () => context.go('/profil'),
+              tooltip: 'Mon profil',
+            ),
           NotificationIconWithBadge(),
           IconButton(
             icon: const Icon(Icons.settings_outlined),
             color: const Color(0xFF64748B),
-            onPressed: () => context.go('/profiladmin'),
+            onPressed: () => context.go('/admin/settings'),
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout),
+            color: const Color(0xFFEF4444),
+            onPressed: () {
+              _apiService.logout();
+              context.go('/login');
+            },
+            tooltip: 'Déconnexion',
           ),
         ],
       ),
@@ -293,17 +571,41 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   Widget _buildWelcomeSection() {
     final userName = _apiService.currentUser?.name ?? 'Admin';
+    final isAdmin = _apiService.currentUser?.role.name.toLowerCase() == 'admin' || 
+                   _apiService.currentUser?.role.name.toLowerCase() == 'administrateur' || 
+                   _apiService.currentUser?.role.name.toLowerCase() == 'bibliothécaire';
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Bonjour, $userName',
-          style: TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            color: const Color(0xFF0F172A),
-          ),
+        Row(
+          children: [
+            Text(
+              'Bonjour, $userName',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF0F172A),
+              ),
+            ),
+            if (isAdmin)
+              Container(
+                margin: const EdgeInsets.only(left: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color.fromARGB(255, 44, 80, 164),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Text(
+                  'ADMIN',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+          ],
         ),
         const SizedBox(height: 8),
         Text(
@@ -339,6 +641,23 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   ),
                 ],
               ),
+            ),
+          ),
+        if (_apiService.isAuthenticated)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Row(
+              children: [
+                Icon(Icons.circle, size: 8, color: Colors.green),
+                const SizedBox(width: 6),
+                Text(
+                  'Connecté • ${_apiService.currentUser?.email ?? ''}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: const Color(0xFF64748B),
+                  ),
+                ),
+              ],
             ),
           ),
       ],
@@ -415,6 +734,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
               fontSize: 12,
               color: const Color(0xFF94A3B8),
             ),
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: _loadData,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color.fromARGB(255, 44, 80, 164),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Actualiser'),
           ),
         ],
       ),
@@ -497,6 +825,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         color: const Color(0xFF64748B),
                       ),
                     ),
+                    const SizedBox(height: 8),
+                    TextButton(
+                      onPressed: _loadData,
+                      child: const Text('Vérifier les nouvelles activités'),
+                    ),
                   ],
                 ),
               ),
@@ -571,6 +904,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         fontSize: 14,
                         color: const Color(0xFF64748B),
                       ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextButton(
+                      onPressed: () => context.go('/catalogue'),
+                      child: const Text('Voir le catalogue'),
                     ),
                   ],
                 ),
@@ -705,6 +1043,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Widget _buildBottomNav() {
+    final currentUser = _apiService.currentUser;
+    final isAdmin = currentUser?.role.name.toLowerCase() == 'admin' || 
+                   currentUser?.role.name.toLowerCase() == 'administrateur' || 
+                   currentUser?.role.name.toLowerCase() == 'bibliothécaire';
+    
+    if (!isAdmin) {
+      // Si l'utilisateur n'est pas admin, retourner une barre de navigation vide
+      return const SizedBox.shrink();
+    }
+    
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -731,7 +1079,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
           BottomNavigationBarItem(icon: Icon(Icons.menu_book_outlined), activeIcon: Icon(Icons.menu_book), label: 'Livres'),
           BottomNavigationBarItem(icon: Icon(Icons.people_outlined), activeIcon: Icon(Icons.people), label: 'Étudiants'),
           BottomNavigationBarItem(icon: Icon(Icons.history_outlined), activeIcon: Icon(Icons.history), label: 'Emprunts'),
-          BottomNavigationBarItem(icon: Icon(Icons.settings_outlined), activeIcon: Icon(Icons.settings), label: 'Profil'),
+          BottomNavigationBarItem(icon: Icon(Icons.settings_outlined), activeIcon: Icon(Icons.settings), label: 'Paramètres'),
         ],
       ),
     );
@@ -743,7 +1091,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     if (location == '/admin/books') return 1;
     if (location == '/admin/etudiants') return 2;
     if (location == '/admin/emprunts') return 3;
-    if (location == '/profiladmin') return 4;
+    if (location == '/admin/settings') return 4;
     return 0;
   }
 
@@ -762,7 +1110,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         context.go('/admin/emprunts');
         break;
       case 4:
-        context.go('/profiladmin');
+        context.go('/admin/settings');
         break;
     }
   }

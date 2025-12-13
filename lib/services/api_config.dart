@@ -1,4 +1,5 @@
 // Endpoints correspondant exactement à votre API PHP
+import '/config/api_url.dart';
 class Endpoints {
   // Authentification
   static const String login = 'login';
@@ -35,9 +36,10 @@ class Endpoints {
   static const String search = 'search';
 }
 
+
 class ApiConfig {
-  // IMPORTANT: Correction ici - Votre API utilise index.php
-  static const String baseUrl = 'http://192.168.1.33/library_app/api';
+  
+  static const String baseUrl = api;
   
   // CORRECTION CLÉ: Votre API attend le paramètre 'request' dans l'URL
   static String getUrl(String endpoint) {

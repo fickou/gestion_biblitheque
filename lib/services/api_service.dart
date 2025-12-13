@@ -122,52 +122,68 @@ class ApiService {
 
   // Méthodes pour les livres avec gestion des nulls
   Future<List<Book>> getBooks() async {
-    try {
-      final response = await http.get(
-        ApiConfig.getBooksUri(),
-        headers: _getAuthHeaders(),
-      );
-
-      print('Statut getBooks: ${response.statusCode}');
-
-      if (response.statusCode == 200) {
-        try {
-          final data = jsonDecode(response.body);
-          
-          // Vérifier si c'est une liste
-          if (data is List) {
-            return data.map((json) {
+  print('📚 getBooks - Début');
+  
+  try {
+    final uri = ApiConfig.getBooksUri();
+    print('🌐 URI: $uri');
+    
+    // Pour books, on peut essayer sans auth d'abord (route publique)
+    final response = await http.get(uri).timeout(const Duration(seconds: 10));
+    
+    print('📊 Status: ${response.statusCode}');
+    print('📄 Réponse (premiers 200 chars): ${response.body.length > 200 ? response.body.substring(0, 200) + '...' : response.body}');
+    
+    if (response.statusCode == 200) {
+      try {
+        final data = jsonDecode(response.body);
+        
+        // Nouveau format: {"success": true, "data": [...]}
+        if (data is Map<String, dynamic> && data['success'] == true) {
+          final booksData = data['data'] ?? [];
+          if (booksData is List) {
+            final books = booksData.map<Book?>((json) {
               try {
                 return Book.fromJson(Map<String, dynamic>.from(json));
               } catch (e) {
-                print('Erreur lors de la conversion d\'un livre: $e');
+                print('⚠️ Erreur conversion livre: $e');
                 return null;
               }
             }).whereType<Book>().toList();
-          } else if (data is Map<String, dynamic>) {
-            // Si c'est un objet avec une clé 'books' ou 'data'
-            final List<dynamic> booksData = data['books'] ?? data['data'] ?? [];
-            return booksData.map((json) {
-              try {
-                return Book.fromJson(Map<String, dynamic>.from(json));
-              } catch (e) {
-                print('Erreur lors de la conversion d\'un livre: $e');
-                return null;
-              }
-            }).whereType<Book>().toList();
+            
+            print('✅ ${books.length} livres récupérés');
+            return books;
           }
-          return [];
-        } catch (e) {
-          print('Erreur de parsing getBooks: $e');
-          return [];
         }
+        // Ancien format: liste directe
+        else if (data is List) {
+          final books = data.map<Book?>((json) {
+            try {
+              return Book.fromJson(Map<String, dynamic>.from(json));
+            } catch (e) {
+              print('⚠️ Erreur conversion livre: $e');
+              return null;
+            }
+          }).whereType<Book>().toList();
+          
+          print('✅ ${books.length} livres récupérés (ancien format)');
+          return books;
+        }
+        
+        return [];
+      } catch (e) {
+        print('❌ Erreur parsing JSON: $e');
+        return [];
       }
-      return [];
-    } catch (e) {
-      print('Erreur lors de la récupération des livres: $e');
+    } else {
+      print('❌ Erreur HTTP: ${response.statusCode}');
       return [];
     }
+  } catch (e) {
+    print('❌ Exception getBooks: $e');
+    return [];
   }
+}
 
   Future<Book?> getBookById(String id) async {
     try {
@@ -364,37 +380,34 @@ class ApiService {
   }
 
   Future<List<Emprunt>> getUserEmprunts(String userId) async {
-    try {
-      final response = await http.get(
-        ApiConfig.getUserEmpruntsUri(userId),
-        headers: _getAuthHeaders(),
-      );
-
-      if (response.statusCode == 200) {
-        try {
-          final data = jsonDecode(response.body);
-          if (data is List) {
-            return data.map((json) {
-              try {
-                return Emprunt.fromJson(Map<String, dynamic>.from(json));
-              } catch (e) {
-                print('Erreur lors de la conversion d\'un emprunt: $e');
-                return null;
-              }
-            }).whereType<Emprunt>().toList();
-          }
-          return [];
-        } catch (e) {
-          print('Erreur de parsing getUserEmprunts: $e');
-          return [];
+  try {
+    final uri = ApiConfig.getUserEmpruntsUri(userId);
+    final headers = _getAuthHeaders();
+    
+    final response = await http.get(uri, headers: headers);
+    
+    if (response.statusCode == 200) {
+      // Nettoyer les warnings PHP
+      String cleanBody = response.body.replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '');
+      cleanBody = cleanBody.replaceAll(RegExp(r'<b>.*?</b>', caseSensitive: false), '');
+      cleanBody = cleanBody.trim();
+      
+      try {
+        final data = jsonDecode(cleanBody);
+        if (data is List) {
+          return data.map((item) => Emprunt.fromJson(Map<String, dynamic>.from(item))).toList();
         }
+      } catch (e) {
+        print('Erreur parsing emprunts: $e');
       }
-      return [];
-    } catch (e) {
-      print('Erreur lors de la récupération des emprunts utilisateur: $e');
-      return [];
     }
+    
+    return [];
+  } catch (e) {
+    print('Erreur getUserEmprunts: $e');
+    return [];
   }
+}
 
   Future<List<Emprunt>> getLateEmprunts() async {
     try {

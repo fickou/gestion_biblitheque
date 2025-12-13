@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../widgets/iconelivre.dart';
+import '../providers/auth_provider.dart'; // Ajoutez cette importation
 
-class Signup extends StatefulWidget {
+class Signup extends ConsumerStatefulWidget { // Changez StatefulWidget à ConsumerStatefulWidget
   const Signup({super.key});
 
   @override
-  State<Signup> createState() => _SignupState();
+  ConsumerState<Signup> createState() => _SignupState();
 }
 
-class _SignupState extends State<Signup> {
+class _SignupState extends ConsumerState<Signup> {
   final _formKey = GlobalKey<FormState>();
   final _nomController = TextEditingController();
   final _prenomController = TextEditingController();
@@ -19,6 +21,7 @@ class _SignupState extends State<Signup> {
   final _confirmPasswordController = TextEditingController();
 
   String _selectedRole = 'Étudiant';
+  bool _isLoading = false; // Ajoutez un état de chargement
 
   @override
   void dispose() {
@@ -31,29 +34,82 @@ class _SignupState extends State<Signup> {
     super.dispose();
   }
 
-  void _handleInscription() {
-    if (_formKey.currentState!.validate()) {
-      if (_passwordController.text != _confirmPasswordController.text) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Les mots de passe ne correspondent pas'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return;
-      }
+  Future<void> _handleInscription() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
 
-      // Message de succès
+    if (_passwordController.text != _confirmPasswordController.text) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Inscription réussie !'),
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 2),
+          content: Text('Les mots de passe ne correspondent pas'),
+          backgroundColor: Colors.red,
         ),
       );
+      return;
+    }
 
-      // ➤ Redirection GoRouter vers le dashboard
-      context.go('/dashboard');
+    setState(() => _isLoading = true);
+
+    try {
+      final authService = ref.read(authServiceProvider);
+      
+      final result = await authService.signUp(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+        nom: _nomController.text.trim(),
+        prenom: _prenomController.text.trim(),
+        matricule: _matriculeController.text.trim(),
+        role: _selectedRole,
+      );
+
+      if (result['success'] == true) {
+        // Message de succès
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Inscription réussie !'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+
+        // Déterminer la redirection basée sur le rôle
+        String redirectPath;
+        if (_selectedRole == 'Administrateur' || _selectedRole == 'Bibliothécaire') {
+          redirectPath = '/admin/dashboard';
+        } else {
+          redirectPath = '/dashboard';
+        }
+
+        // Attendre un peu avant la redirection
+        await Future.delayed(const Duration(milliseconds: 500));
+        
+        // ➤ Redirection GoRouter vers le dashboard approprié
+        if (mounted) {
+          context.go(redirectPath);
+        }
+      } else {
+        // Afficher l'erreur de Firebase
+        final errorMessage = result['error'] ?? 'Erreur lors de l\'inscription';
+        throw Exception(errorMessage);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            e.toString().replaceAll('Exception: ', ''),
+            style: const TextStyle(color: Colors.white),
+          ),
+          backgroundColor: Colors.red.shade600,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -107,8 +163,14 @@ class _SignupState extends State<Signup> {
                     Align(
                       alignment: Alignment.topLeft,
                       child: IconButton(
-                        icon: const Icon(Icons.arrow_back, color: Colors.white),
-                        onPressed: () => context.go('/login'), // FIX
+                        icon: Icon(
+                          Icons.arrow_back, 
+                          color: Colors.white,
+                          size: 28,
+                        ),
+                        onPressed: _isLoading 
+                            ? null 
+                            : () => context.go('/login'),
                       ),
                     ),
 
@@ -176,6 +238,7 @@ class _SignupState extends State<Signup> {
                                         }
                                         return null;
                                       },
+                                      enabled: !_isLoading,
                                     ),
                                   ),
                                   const SizedBox(width: 16),
@@ -191,6 +254,7 @@ class _SignupState extends State<Signup> {
                                         }
                                         return null;
                                       },
+                                      enabled: !_isLoading,
                                     ),
                                   ),
                                 ],
@@ -203,15 +267,17 @@ class _SignupState extends State<Signup> {
                                 decoration: const InputDecoration(
                                   labelText: 'Email',
                                 ),
+                                keyboardType: TextInputType.emailAddress,
                                 validator: (value) {
                                   if (value == null || value.isEmpty) {
                                     return 'Veuillez entrer votre email';
                                   }
-                                  if (!value.contains('@')) {
-                                    return 'Email invalide';
+                                  if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
+                                    return 'Format d\'email invalide';
                                   }
                                   return null;
                                 },
+                                enabled: !_isLoading,
                               ),
 
                               const SizedBox(height: 20),
@@ -227,15 +293,17 @@ class _SignupState extends State<Signup> {
                                   }
                                   return null;
                                 },
+                                enabled: !_isLoading,
                               ),
 
                               const SizedBox(height: 20),
 
                               DropdownButtonFormField(
-                                initialValue: _selectedRole,
+                                value: _selectedRole,
                                 items: [
                                   'Étudiant',
                                   'Enseignant',
+                                  'Bibliothécaire', // Ajouté pour cohérence
                                   'Administrateur'
                                 ].map((role) {
                                   return DropdownMenuItem(
@@ -243,11 +311,13 @@ class _SignupState extends State<Signup> {
                                     child: Text(role),
                                   );
                                 }).toList(),
-                                onChanged: (value) {
-                                  setState(() {
-                                    _selectedRole = value!;
-                                  });
-                                },
+                                onChanged: _isLoading 
+                                    ? null 
+                                    : (value) {
+                                        setState(() {
+                                          _selectedRole = value as String;
+                                        });
+                                      },
                                 decoration: const InputDecoration(
                                   labelText: 'Rôle',
                                 ),
@@ -260,16 +330,18 @@ class _SignupState extends State<Signup> {
                                 obscureText: true,
                                 decoration: const InputDecoration(
                                   labelText: 'Mot de passe',
+                                  hintText: 'Minimum 6 caractères',
                                 ),
                                 validator: (value) {
                                   if (value == null || value.isEmpty) {
                                     return 'Entrez un mot de passe';
                                   }
                                   if (value.length < 6) {
-                                    return 'Min 6 caractères';
+                                    return 'Minimum 6 caractères';
                                   }
                                   return null;
                                 },
+                                enabled: !_isLoading,
                               ),
 
                               const SizedBox(height: 20),
@@ -286,21 +358,47 @@ class _SignupState extends State<Signup> {
                                   }
                                   return null;
                                 },
+                                enabled: !_isLoading,
                               ),
 
                               const SizedBox(height: 25),
 
                               // 🔥 BOUTON INSCRIPTION
-                              ElevatedButton(
-                                onPressed: _handleInscription,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color.fromARGB(255, 44, 80, 164),
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
-                                ),
-                                child: const Text(
-                                  "S'inscrire",
-                                  style: TextStyle(fontSize: 18),
+                              SizedBox(
+                                height: 50,
+                                child: ElevatedButton(
+                                  onPressed: _isLoading ? null : _handleInscription,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color.fromARGB(255, 44, 80, 164),
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(vertical: 14),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                  child: _isLoading
+                                      ? const Row(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            SizedBox(
+                                              height: 20,
+                                              width: 20,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                              ),
+                                            ),
+                                            SizedBox(width: 12),
+                                            Text(
+                                              'Inscription en cours...',
+                                              style: TextStyle(fontSize: 16),
+                                            ),
+                                          ],
+                                        )
+                                      : const Text(
+                                          "S'inscrire",
+                                          style: TextStyle(fontSize: 18),
+                                        ),
                                 ),
                               ),
 
@@ -308,7 +406,9 @@ class _SignupState extends State<Signup> {
 
                               Center(
                                 child: TextButton(
-                                  onPressed: () => context.go('/login'),
+                                  onPressed: _isLoading 
+                                      ? null 
+                                      : () => context.go('/login'),
                                   child: const Text(
                                     'Se connecter',
                                     style: TextStyle(

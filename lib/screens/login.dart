@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../services/api_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:gestion_bibliotheque/providers/auth_provider.dart';
 
-class Login extends StatefulWidget {
+class Login extends ConsumerStatefulWidget {
   const Login({super.key});
 
   @override
-  State<Login> createState() => _LoginState();
+  ConsumerState<Login> createState() => _LoginState();
 }
 
-class _LoginState extends State<Login> {
+class _LoginState extends ConsumerState<Login> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  final ApiService _apiService = ApiService();
 
   bool _obscurePassword = true;
   bool _isLoading = false;
@@ -33,11 +33,16 @@ class _LoginState extends State<Login> {
 
     setState(() => _isLoading = true);
 
-    try {
-      final email = _emailController.text.trim();
-      final password = _passwordController.text;
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
 
-      final result = await _apiService.login(email, password);
+    final authService = ref.read(authServiceProvider);
+    
+    try {
+      final result = await authService.signIn(
+        email: email,
+        password: password,
+      );
 
       if (result['success'] == true) {
         if (!mounted) return;
@@ -52,13 +57,13 @@ class _LoginState extends State<Login> {
           ),
         );
 
-        // Récupérer l'utilisateur connecté
-        final user = _apiService.currentUser;
+        // Récupérer le rôle depuis le résultat
+        final userData = result['userData'] as Map<String, dynamic>;
+        final role = userData['role'] as String? ?? 'Étudiant';
         
         // Déterminer la route de redirection
-        print(  'user role: ${user?.role.name}');
         String redirectPath;
-        if (user?.role.name == 'Administrateur' || user?.role.name == 'Bibliothécaire') {
+        if (role == 'Administrateur' || role == 'Bibliothécaire') {
           redirectPath = '/admin/dashboard';
         } else {
           redirectPath = '/dashboard';
@@ -71,8 +76,8 @@ class _LoginState extends State<Login> {
           context.go(redirectPath);
         }
       } else {
-        // Afficher l'erreur retournée par l'API
-        final errorMessage = result['message'] ?? 'Identifiants incorrects';
+        // Afficher l'erreur retournée par Firebase
+        final errorMessage = result['error'] ?? 'Identifiants incorrects';
         throw Exception(errorMessage);
       }
     } catch (e) {
@@ -97,36 +102,42 @@ class _LoginState extends State<Login> {
     }
   }
 
-  // ignore: unused_element
-  void _handleGuestLogin() async {
+  // Fonction pour réinitialiser le mot de passe
+  Future<void> _handleForgotPassword() async {
+    if (_emailController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Veuillez entrer votre email'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    final email = _emailController.text.trim();
+    final authService = ref.read(authServiceProvider);
+    
     setState(() => _isLoading = true);
     
     try {
-      // Simuler un délai pour l'effet de chargement
-      await Future.delayed(const Duration(seconds: 1));
+      final result = await authService.resetPassword(email: email);
       
-      if (!mounted) return;
-      
-      // Afficher un message d'information
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Accès visiteur activé - Fonctionnalités limitées"),
-          backgroundColor: Colors.blue,
-          behavior: SnackBarBehavior.floating,
-          duration: Duration(seconds: 2),
-        ),
-      );
-      
-      // Rediriger vers la page d'accueil publique
-      await Future.delayed(const Duration(milliseconds: 500));
-      context.go('/');
+      if (result['success'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] as String),
+            backgroundColor: Colors.green.shade600,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      } else {
+        throw Exception(result['error']);
+      }
     } catch (e) {
-      if (!mounted) return;
-      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Erreur: ${e.toString()}'),
-          backgroundColor: Colors.red,
+          content: Text(e.toString()),
+          backgroundColor: Colors.red.shade600,
         ),
       );
     } finally {
@@ -363,17 +374,7 @@ class _LoginState extends State<Login> {
     return Align(
       alignment: Alignment.centerRight,
       child: TextButton(
-        onPressed: _isLoading
-            ? null
-            : () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Contactez l\'administration pour réinitialiser votre mot de passe'),
-                    backgroundColor: Colors.blue,
-                    duration: Duration(seconds: 3),
-                  ),
-                );
-              },
+        onPressed: _isLoading ? null : _handleForgotPassword,
         style: TextButton.styleFrom(
           padding: EdgeInsets.zero,
           minimumSize: Size.zero,
