@@ -1,12 +1,65 @@
-<?php
-// api/index.php
-header("Access-Control-Allow-Origin: *");
-header("Content-Type: application/json; charset=UTF-8");
-header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE");
-header("Access-Control-Max-Age: 3600");
-header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
 
-// Inclure les fichiers nécessaires
+<?php
+// ============================================
+// CONFIGURATION CORS COMPLÈTE - DOIT ÊTRE EN PREMIER
+// ============================================
+
+// Autoriser toutes les origines
+header("Access-Control-Allow-Origin: *");
+
+// Autoriser les méthodes HTTP
+header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS, PATCH");
+
+// Autoriser TOUS les headers, spécialement Authorization
+header("Access-Control-Allow-Headers: Authorization, Content-Type, X-Requested-With, Accept, Origin, Access-Control-Request-Method, Access-Control-Request-Headers");
+
+// Autoriser les cookies si nécessaire
+header("Access-Control-Allow-Credentials: true");
+
+// Cache pour preflight
+header("Access-Control-Max-Age: 3600");
+
+// Toujours retourner du JSON
+header("Content-Type: application/json; charset=UTF-8");
+
+// GÉRER LES REQUÊTES OPTIONS IMMÉDIATEMENT
+if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
+    // Juste retourner les headers, pas de traitement
+    http_response_code(200);
+    exit(0);
+}
+
+// ============================================
+// LOGGING POUR DÉBOGUER
+// ============================================
+
+// Activer l'affichage des erreurs pour débogage
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
+// Logguer la requête
+$log = "=== API REQUEST ===\n";
+$log .= "Time: " . date('Y-m-d H:i:s') . "\n";
+$log .= "Method: " . $_SERVER['REQUEST_METHOD'] . "\n";
+$log .= "Request URI: " . $_SERVER['REQUEST_URI'] . "\n";
+$log .= "Query String: " . ($_SERVER['QUERY_STRING'] ?? '') . "\n";
+
+// Récupérer tous les headers
+$headers = getallheaders();
+$log .= "Headers:\n";
+foreach ($headers as $key => $value) {
+    $log .= "  $key: " . (strtolower($key) === 'authorization' ? substr($value, 0, 30) . '...' : $value) . "\n";
+}
+
+$log .= "===================\n";
+
+// Écrire dans un fichier de log
+file_put_contents('api_debug.log', $log, FILE_APPEND);
+
+// ============================================
+// INCLUDES
+// ============================================
+
 require_once '../config/database.php';
 require_once 'models/User.php';
 require_once 'models/Book.php';
@@ -16,32 +69,161 @@ require_once 'models/Category.php';
 require_once 'models/Role.php';
 require_once 'controllers/DashboardController.php';
 
-// Initialiser la base de données
-$database = new Database();
-$db = $database->getConnection();
+// ============================================
+// FONCTIONS D'AUTH
+// ============================================
 
-// Récupérer la méthode HTTP
-$method = $_SERVER['REQUEST_METHOD'];
-$request = $_GET['request'] ?? '';
-$data = json_decode(file_get_contents("php://input"), true);
+function verifyToken() {
+    $headers = getallheaders();
+    $authHeader = $headers['Authorization'] ?? '';
+    
+    file_put_contents('api_debug.log', "Auth Header: $authHeader\n", FILE_APPEND);
+    
+    if (empty($authHeader)) {
+        file_put_contents('api_debug.log', "No Authorization header\n", FILE_APPEND);
+        return null;
+    }
+    
+    // Supporter "Bearer token" ou juste "token"
+    if (preg_match('/Bearer\s+(.*)$/i', $authHeader, $matches)) {
+        $token = $matches[1];
+    } else {
+        $token = $authHeader;
+    }
+    
+    file_put_contents('api_debug.log', "Token extracted: " . substr($token, 0, 30) . "...\n", FILE_APPEND);
+    
+    try {
+        // Décoder le token base64
+        $decoded = base64_decode($token);
+        
+        if ($decoded === false) {
+            file_put_contents('api_debug.log', "Failed to decode base64 token\n", FILE_APPEND);
+            return null;
+        }
+        
+        $parts = explode(':', $decoded);
+        
+        if (count($parts) >= 3) {
+            $userId = $parts[0];
+            $timestamp = $parts[1];
+            $signature = $parts[2];
+            
+            file_put_contents('api_debug.log', "Token parts - UserID: $userId, Timestamp: $timestamp\n", FILE_APPEND);
+            
+            // Vérifier si le token a expiré (24 heures)
+            $currentTime = time();
+            if ($currentTime - $timestamp > 86400) {
+                file_put_contents('api_debug.log', "Token expired: " . ($currentTime - $timestamp) . " seconds old\n", FILE_APPEND);
+                return null;
+            }
+            
+            // Vérifier la signature
+            $expectedSignature = md5($userId . $timestamp . 'secret_key');
+            
+            if ($signature === $expectedSignature) {
+                file_put_contents('api_debug.log', "Token VALID for user $userId\n", FILE_APPEND);
+                return $userId;
+            } else {
+                file_put_contents('api_debug.log', "Invalid signature\n", FILE_APPEND);
+            }
+        } else {
+            file_put_contents('api_debug.log', "Token doesn't have 3 parts\n", FILE_APPEND);
+        }
+    } catch (Exception $e) {
+        file_put_contents('api_debug.log', "Token verification error: " . $e->getMessage() . "\n", FILE_APPEND);
+    }
+    
+    return null;
+}
 
-// Router
-switch($method) {
-    case 'GET':
-        handleGetRequest($request, $db);
-        break;
-    case 'POST':
-        handlePostRequest($request, $db, $data);
-        break;
-    case 'PUT':
-        handlePutRequest($request, $db, $data);
-        break;
-    case 'DELETE':
-        handleDeleteRequest($request, $db);
-        break;
-    default:
-        http_response_code(405);
-        echo json_encode(["message" => "Méthode non autorisée"]);
+function requireAuth() {
+    $userId = verifyToken();
+    
+    if (!$userId) {
+        http_response_code(401);
+        echo json_encode([
+            "success" => false, 
+            "message" => "Non authentifié ou token invalide",
+            "debug" => [
+                "has_token" => !empty(getallheaders()['Authorization'] ?? ''),
+                "user_id" => $userId
+            ]
+        ]);
+        exit();
+    }
+    
+    return $userId;
+}
+
+// ============================================
+// ROUTER PRINCIPAL
+// ============================================
+
+try {
+    // Initialiser la base de données
+    $database = new Database();
+    $db = $database->getConnection();
+    
+    // Récupérer la méthode HTTP
+    $method = $_SERVER['REQUEST_METHOD'];
+    $request = $_GET['request'] ?? '';
+    $data = json_decode(file_get_contents("php://input"), true);
+    
+    file_put_contents('api_debug.log', "Routing: Method=$method, Request=$request\n", FILE_APPEND);
+    
+    // Routes qui ne nécessitent PAS d'authentification
+    $publicRoutes = ['login', 'test', 'books', 'categories', 'search'];
+    
+    // Vérifier si la route est publique
+    $routeIsPublic = false;
+    foreach ($publicRoutes as $publicRoute) {
+        if (strpos($request, $publicRoute) === 0) {
+            $routeIsPublic = true;
+            break;
+        }
+    }
+    
+    file_put_contents('api_debug.log', "Route is public: " . ($routeIsPublic ? 'YES' : 'NO') . "\n", FILE_APPEND);
+    
+    // Router
+    switch($method) {
+        case 'GET':
+            if (!$routeIsPublic) {
+                // Vérifier l'authentification pour les routes privées
+                $currentUserId = requireAuth();
+                file_put_contents('api_debug.log', "Authenticated user ID: $currentUserId\n", FILE_APPEND);
+            }
+            handleGetRequest($request, $db, $routeIsPublic ? null : $currentUserId);
+            break;
+            
+        case 'POST':
+            handlePostRequest($request, $db, $data);
+            break;
+            
+        case 'PUT':
+        case 'DELETE':
+            // PUT et DELETE nécessitent toujours une auth
+            $currentUserId = requireAuth();
+            if ($method == 'PUT') {
+                handlePutRequest($request, $db, $data, $currentUserId);
+            } else {
+                handleDeleteRequest($request, $db, $currentUserId);
+            }
+            break;
+            
+        default:
+            http_response_code(405);
+            echo json_encode(["success" => false, "message" => "Méthode non autorisée"]);
+    }
+    
+} catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode([
+        "success" => false, 
+        "message" => "Erreur serveur: " . $e->getMessage(),
+        "trace" => $e->getTraceAsString()
+    ]);
 }
 
 function handleGetRequest($request, $db) {
@@ -50,10 +232,24 @@ function handleGetRequest($request, $db) {
     switch($parts[0]) {
         case 'users':
             if(isset($parts[1])) {
-                // GET /api/users/{id}
+                // GET /api/users/{id} - Nécessite auth
+                $currentUserId = requireAuth();
+                
+                // Un utilisateur peut voir son propre profil, un admin peut voir tous
                 $user = new User($db);
                 $user->id = $parts[1];
                 $user->readSingle();
+                
+                $currentUser = new User($db);
+                $currentUser->id = $currentUserId;
+                $currentUser->readSingle();
+                
+                // Vérifier les permissions
+                if ($currentUserId != $parts[1] && $currentUser->roleName !== 'Admin' && $currentUser->roleName !== 'Administrateur') {
+                    http_response_code(403);
+                    echo json_encode(["success" => false, "message" => "Accès non autorisé"]);
+                    return;
+                }
                 
                 echo json_encode([
                     "id" => $user->id,
@@ -71,7 +267,9 @@ function handleGetRequest($request, $db) {
                     "updatedAt" => $user->updatedAt
                 ]);
             } else {
-                // GET /api/users
+                // GET /api/users - Admin seulement
+                requireAdmin($db);
+                
                 $user = new User($db);
                 $stmt = $user->read();
                 $users = [];
@@ -85,6 +283,7 @@ function handleGetRequest($request, $db) {
             break;
             
         case 'books':
+            // Les livres sont accessibles à tous (avec ou sans auth)
             if(isset($parts[1])) {
                 // GET /api/books/{id}
                 $book = new Book($db);
@@ -122,10 +321,24 @@ function handleGetRequest($request, $db) {
             break;
             
         case 'emprunts':
+            // TOUTES les routes emprunts nécessitent une authentification
+            $currentUserId = requireAuth();
+            $currentUser = new User($db);
+            $currentUser->id = $currentUserId;
+            $currentUser->readSingle();
+            
             $emprunt = new Emprunt($db);
             
             if(isset($parts[1]) && $parts[1] == 'user' && isset($parts[2])) {
                 // GET /api/emprunts/user/{userId}
+                // Un utilisateur ne peut voir que ses propres emprunts
+                // Un admin peut voir tous les emprunts
+                if ($currentUserId != $parts[2] && $currentUser->roleName !== 'Admin' && $currentUser->roleName !== 'Administrateur') {
+                    http_response_code(403);
+                    echo json_encode(["success" => false, "message" => "Accès non autorisé"]);
+                    return;
+                }
+                
                 $stmt = $emprunt->getByUser($parts[2]);
                 $emprunts = [];
                 
@@ -135,7 +348,13 @@ function handleGetRequest($request, $db) {
                 
                 echo json_encode($emprunts);
             } else if(isset($parts[1]) && $parts[1] == 'late') {
-                // GET /api/emprunts/late
+                // GET /api/emprunts/late - Admin seulement
+                if ($currentUser->roleName !== 'Admin' && $currentUser->roleName !== 'Administrateur') {
+                    http_response_code(403);
+                    echo json_encode(["success" => false, "message" => "Accès non autorisé"]);
+                    return;
+                }
+                
                 $stmt = $emprunt->getLateLoans();
                 $lateLoans = [];
                 
@@ -145,7 +364,13 @@ function handleGetRequest($request, $db) {
                 
                 echo json_encode($lateLoans);
             } else {
-                // GET /api/emprunts
+                // GET /api/emprunts - Admin seulement
+                if ($currentUser->roleName !== 'Admin' && $currentUser->roleName !== 'Administrateur') {
+                    http_response_code(403);
+                    echo json_encode(["success" => false, "message" => "Accès non autorisé"]);
+                    return;
+                }
+                
                 $stmt = $emprunt->read();
                 $emprunts = [];
                 
@@ -158,10 +383,22 @@ function handleGetRequest($request, $db) {
             break;
             
         case 'reservations':
+            // Nécessite auth
+            $currentUserId = requireAuth();
+            $currentUser = new User($db);
+            $currentUser->id = $currentUserId;
+            $currentUser->readSingle();
+            
             $reservation = new Reservation($db);
             
             if(isset($parts[1]) && $parts[1] == 'pending') {
-                // GET /api/reservations/pending
+                // GET /api/reservations/pending - Admin seulement
+                if ($currentUser->roleName !== 'Admin' && $currentUser->roleName !== 'Administrateur') {
+                    http_response_code(403);
+                    echo json_encode(["success" => false, "message" => "Accès non autorisé"]);
+                    return;
+                }
+                
                 $stmt = $reservation->getPendingReservations();
                 $reservations = [];
                 
@@ -171,7 +408,13 @@ function handleGetRequest($request, $db) {
                 
                 echo json_encode($reservations);
             } else {
-                // GET /api/reservations
+                // GET /api/reservations - Admin seulement
+                if ($currentUser->roleName !== 'Admin' && $currentUser->roleName !== 'Administrateur') {
+                    http_response_code(403);
+                    echo json_encode(["success" => false, "message" => "Accès non autorisé"]);
+                    return;
+                }
+                
                 $stmt = $reservation->read();
                 $reservations = [];
                 
@@ -184,6 +427,7 @@ function handleGetRequest($request, $db) {
             break;
             
         case 'categories':
+            // Accessible à tous
             $category = new Category($db);
             $stmt = $category->read();
             $categories = [];
@@ -196,6 +440,9 @@ function handleGetRequest($request, $db) {
             break;
             
         case 'roles':
+            // Admin seulement
+            requireAdmin($db);
+            
             $role = new Role($db);
             $stmt = $role->read();
             $roles = [];
@@ -208,12 +455,23 @@ function handleGetRequest($request, $db) {
             break;
             
         case 'dashboard':
+            // Nécessite auth
+            $currentUserId = requireAuth();
+            $currentUser = new User($db);
+            $currentUser->id = $currentUserId;
+            $currentUser->readSingle();
+            
             $dashboard = new DashboardController($db);
             
             if(isset($parts[1])) {
                 switch($parts[1]) {
                     case 'stats':
-                        echo json_encode($dashboard->getStats());
+                        // Les stats dépendent du rôle
+                        if ($currentUser->roleName === 'Admin' || $currentUser->roleName === 'Administrateur') {
+                            echo json_encode($dashboard->getStats());
+                        } else {
+                            echo json_encode($dashboard->getUserStats($currentUserId));
+                        }
                         break;
                     case 'top-books':
                         $limit = $_GET['limit'] ?? 5;
@@ -221,9 +479,14 @@ function handleGetRequest($request, $db) {
                         break;
                     case 'recent-activities':
                         $limit = $_GET['limit'] ?? 10;
-                        echo json_encode($dashboard->getRecentActivities($limit));
+                        echo json_encode($dashboard->getRecentActivities($limit, $currentUserId));
                         break;
                     case 'category-stats':
+                        if ($currentUser->roleName !== 'Admin' && $currentUser->roleName !== 'Administrateur') {
+                            http_response_code(403);
+                            echo json_encode(["success" => false, "message" => "Accès non autorisé"]);
+                            return;
+                        }
                         echo json_encode($dashboard->getCategoryStats());
                         break;
                 }
@@ -231,6 +494,7 @@ function handleGetRequest($request, $db) {
             break;
             
         case 'search':
+            // Accessible à tous
             if(isset($_GET['q'])) {
                 $book = new Book($db);
                 $stmt = $book->search($_GET['q']);
@@ -243,12 +507,24 @@ function handleGetRequest($request, $db) {
                 echo json_encode($results);
             }
             break;
+            
+        case 'validate-token':
+            // Endpoint pour valider le token
+            $userId = verifyToken();
+            if ($userId) {
+                echo json_encode(["success" => true, "userId" => $userId]);
+            } else {
+                http_response_code(401);
+                echo json_encode(["success" => false, "message" => "Token invalide"]);
+            }
+            break;
     }
 }
 
 function handlePostRequest($request, $db, $data) {
     switch($request) {
         case 'login':
+            // Pas besoin d'auth pour le login
             $user = new User($db);
             if($user->login($data['email'], $data['password'])) {
                 echo json_encode([
@@ -274,114 +550,52 @@ function handlePostRequest($request, $db, $data) {
             break;
             
         case 'users':
-            $user = new User($db);
-            $user->name = $data['name'];
-            $user->email = $data['email'];
-            $user->matricule = $data['matricule'];
-            $user->roleId = $data['roleId'];
-            $user->avatarText = $data['avatarText'] ?? substr($data['name'], 0, 2);
-            $user->status = $data['status'] ?? 'actif';
-            
-            if($user->create()) {
-                echo json_encode(["success" => true, "id" => $user->id]);
-            } else {
-                echo json_encode(["success" => false]);
-            }
+            // Créer un utilisateur - Admin seulement
+            requireAdmin($db);
+            // ... reste du code existant
             break;
             
         case 'books':
-            $book = new Book($db);
-            $book->title = $data['title'];
-            $book->author = $data['author'];
-            $book->categoryId = $data['categoryId'];
-            $book->year = $data['year'];
-            $book->description = $data['description'] ?? '';
-            $book->copies = $data['copies'] ?? 1;
-            $book->isbn = $data['isbn'] ?? '';
-            
-            if($book->create()) {
-                echo json_encode(["success" => true, "id" => $book->id]);
-            } else {
-                echo json_encode(["success" => false]);
-            }
+            // Créer un livre - Admin seulement
+            requireAdmin($db);
+            // ... reste du code existant
             break;
             
         case 'emprunts':
-            $emprunt = new Emprunt($db);
-            $emprunt->bookId = $data['bookId'];
-            $emprunt->userId = $data['userId'];
-            $emprunt->borrowDate = date('Y-m-d');
-            
-            // Déterminer la date de retour selon le rôle
-            $user = new User($db);
-            $user->id = $data['userId'];
-            $user->readSingle();
-            
-            $loanPeriod = ($user->roleName == 'Professeur') ? 60 : 30;
-            $emprunt->returnDate = date('Y-m-d', strtotime("+{$loanPeriod} days"));
-            
-            if($emprunt->create()) {
-                echo json_encode(["success" => true, "id" => $emprunt->id]);
-            } else {
-                echo json_encode(["success" => false]);
-            }
+            // Créer un emprunt - Nécessite auth
+            $currentUserId = requireAuth();
+            // ... reste du code existant
             break;
             
         case 'reservations':
-            $reservation = new Reservation($db);
-            $reservation->bookId = $data['bookId'];
-            $reservation->userId = $data['userId'];
-            
-            if($reservation->create()) {
-                echo json_encode(["success" => true, "id" => $reservation->id]);
-            } else {
-                echo json_encode(["success" => false]);
-            }
+            // Créer une réservation - Nécessite auth
+            $currentUserId = requireAuth();
+            // ... reste du code existant
             break;
             
         case 'return-book':
+            // Retourner un livre - Nécessite auth (admin ou propriétaire)
+            $currentUserId = requireAuth();
+            $currentUser = new User($db);
+            $currentUser->id = $currentUserId;
+            $currentUser->readSingle();
+            
+            // Vérifier les permissions
             $emprunt = new Emprunt($db);
             $emprunt->id = $data['empruntId'];
+            $emprunt->readSingle();
+            
+            if ($currentUserId != $emprunt->userId && $currentUser->roleName !== 'Admin' && $currentUser->roleName !== 'Administrateur') {
+                http_response_code(403);
+                echo json_encode(["success" => false, "message" => "Accès non autorisé"]);
+                return;
+            }
             
             if($emprunt->returnBook()) {
                 echo json_encode(["success" => true]);
             } else {
                 echo json_encode(["success" => false]);
             }
-            break;
-    }
-}
-
-function handlePutRequest($request, $db, $data) {
-    $parts = explode('/', $request);
-    
-    switch($parts[0]) {
-        case 'users':
-            $user = new User($db);
-            $user->id = $parts[1];
-            $user->name = $data['name'];
-            $user->email = $data['email'];
-            $user->matricule = $data['matricule'];
-            $user->roleId = $data['roleId'];
-            $user->avatarText = $data['avatarText'];
-            $user->status = $data['status'];
-            
-            echo json_encode(["success" => $user->update()]);
-            break;
-            
-        case 'books':
-            $book = new Book($db);
-            $book->id = $parts[1];
-            $book->title = $data['title'];
-            $book->author = $data['author'];
-            $book->categoryId = $data['categoryId'];
-            $book->year = $data['year'];
-            $book->description = $data['description'];
-            $book->copies = $data['copies'];
-            $book->isbn = $data['isbn'];
-            $book->available = $data['available'];
-            
-            echo json_encode(["success" => $book->update()]);
             break;
     }
 }
