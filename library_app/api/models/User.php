@@ -246,4 +246,18 @@
                 return false;
             }
         }
+
+        public function readByRole($roleName) {
+            $query = "SELECT u.*, r.name as roleName, r.permissions 
+                    FROM users u 
+                    LEFT JOIN roles r ON u.roleId = r.id 
+                    WHERE r.name = :roleName
+                    ORDER BY u.name ASC";
+            
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(':roleName', $roleName);
+            $stmt->execute();
+            
+            return $stmt;
+        }
     }

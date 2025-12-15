@@ -1,37 +1,46 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '/providers/auth_provider.dart';
 import '../models/book.dart';
 import '../models/quick_action.dart';
-import '../models/user.dart';
 import '../services/api_service.dart';
 
-class DashboardPage extends StatefulWidget {
+class DashboardPage extends ConsumerWidget {  // Changé en ConsumerWidget
   const DashboardPage({super.key});
 
   @override
-  State<DashboardPage> createState() => _DashboardPageState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    return const _DashboardContent();
+  }
 }
 
-class _DashboardPageState extends State<DashboardPage> {
+class _DashboardContent extends ConsumerStatefulWidget {
+  const _DashboardContent();
+
+  @override
+  ConsumerState<_DashboardContent> createState() => __DashboardContentState();
+}
+
+class __DashboardContentState extends ConsumerState<_DashboardContent> {
   final ApiService _apiService = ApiService();
   String _searchQuery = '';
   List<Book> _newBooks = [];
   List<Book> _popularBooks = [];
   bool _isLoading = true;
   String _errorMessage = '';
-  User? _currentUser;
 
   final List<QuickAction> quickActions = [
     QuickAction(
       icon: Icons.menu_book,
       label: 'Catalogue',
-      color: const Color.fromARGB(255, 44, 80, 164),
+      color: const Color(0xFF2C50A4),
       route: '/catalogue',
     ),
     QuickAction(
       icon: Icons.description,
       label: 'Mes emprunts',
-      color: const Color.fromARGB(221, 248, 190, 45),
+      color: const Color(0xFFF8BE2D),
       route: '/emprunts',
     ),
     QuickAction(
@@ -61,9 +70,6 @@ class _DashboardPageState extends State<DashboardPage> {
     });
 
     try {
-      // Charger les informations de l'utilisateur
-      _currentUser = _apiService.currentUser;
-
       // Charger les livres depuis l'API
       final books = await _apiService.getBooks();
       
@@ -126,12 +132,84 @@ class _DashboardPageState extends State<DashboardPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Récupérer l'état d'authentification comme dans ProfilePage
+    final isAuthenticated = ref.watch(isLoggedInProvider);
+    final completeUserAsync = ref.watch(completeUserProvider);
+    
+    // Vérifier si l'utilisateur est connecté
+    if (!isAuthenticated) {
+      // Rediriger vers la page de connexion si non authentifié
+      Future.delayed(Duration.zero, () {
+        context.go('/login');
+      });
+      
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    return completeUserAsync.when(
+      data: (completeUser) {
+        if (completeUser == null) {
+          return const Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
+        
+        return _buildDashboardContent(context, completeUser);
+      },
+      loading: () => const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      ),
+      error: (error, stack) {
+        print('❌ Erreur chargement dashboard: $error');
+        return Scaffold(
+          appBar: AppBar(
+            backgroundColor: const Color(0xFF2C50A4),
+            title: const Text("Dashboard"),
+          ),
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error, color: Colors.red, size: 50),
+                const SizedBox(height: 20),
+                const Text(
+                  'Erreur de chargement',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  error.toString(),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.grey),
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: () => ref.refresh(completeUserProvider),
+                  child: const Text('Réessayer'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildDashboardContent(BuildContext context, CompleteUser completeUser) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       body: SafeArea(
         child: Column(
           children: [
-            _buildAppHeader(),
+            _buildAppHeader(completeUser),
             Expanded(
               child: _isLoading
                   ? _buildLoadingIndicator()
@@ -162,7 +240,7 @@ class _DashboardPageState extends State<DashboardPage> {
                                     const SizedBox(height: 24),
                                   ],
                                   
-                                  _buildWelcomeCard(),
+                                  _buildWelcomeCard(completeUser),
                                   const SizedBox(height: 24),
                                 ],
                               ),
@@ -176,7 +254,7 @@ class _DashboardPageState extends State<DashboardPage> {
       floatingActionButton: _errorMessage.isNotEmpty && _newBooks.isEmpty && _popularBooks.isEmpty
           ? FloatingActionButton(
               onPressed: _loadDashboardData,
-              backgroundColor: const Color.fromARGB(255, 44, 80, 164),
+              backgroundColor: const Color(0xFF2C50A4),
               child: const Icon(Icons.refresh, color: Colors.white),
             )
           : null,
@@ -190,7 +268,7 @@ class _DashboardPageState extends State<DashboardPage> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const CircularProgressIndicator(
-            color: Color.fromARGB(255, 44, 80, 164),
+            color: Color(0xFF2C50A4),
           ),
           const SizedBox(height: 16),
           Text(
@@ -239,7 +317,7 @@ class _DashboardPageState extends State<DashboardPage> {
             ElevatedButton(
               onPressed: _loadDashboardData,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color.fromARGB(255, 44, 80, 164),
+                backgroundColor: const Color(0xFF2C50A4),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
               ),
@@ -296,7 +374,7 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   /// 🧭 Header avec barre de recherche
-  Widget _buildAppHeader() {
+  Widget _buildAppHeader(CompleteUser completeUser) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -313,28 +391,36 @@ class _DashboardPageState extends State<DashboardPage> {
         children: [
           Row(
             children: [
-              const Text(
-                'Bibliothèque',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Color.fromARGB(255, 44, 80, 164),
-                ),
+              const CircleAvatar(
+                radius: 20,
+                backgroundColor: Color(0xFF2C50A4),
+                child: Icon(Icons.library_books, color: Colors.white, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Bibliothèque',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF2C50A4),
+                    ),
+                  ),
+                  Text(
+                    'Bonjour, ${completeUser.displayName}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                ],
               ),
               const Spacer(),
-              IconButton(
-                icon: const Icon(Icons.notifications_outlined),
-                color: const Color(0xFF64748B),
-                onPressed: () {
-                  // TODO: Implémenter les notifications
-                },
-              ),
-              IconButton(
-                icon: const Icon(Icons.refresh_outlined),
-                color: const Color(0xFF64748B),
-                onPressed: _loadDashboardData,
-                tooltip: 'Rafraîchir',
-              ),
+              _buildNotificationButton(),
+              const SizedBox(width: 8),
+              _buildProfileButton(completeUser),
             ],
           ),
           const SizedBox(height: 12),
@@ -376,6 +462,70 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
+  Widget _buildNotificationButton() {
+    return Stack(
+      children: [
+        IconButton(
+          icon: const Icon(Icons.notifications_outlined),
+          color: const Color(0xFF64748B),
+          onPressed: () {
+            // TODO: Implémenter les notifications
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Notifications - Fonctionnalité à venir'),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          },
+        ),
+        Positioned(
+          right: 8,
+          top: 8,
+          child: Container(
+            width: 8,
+            height: 8,
+            decoration: const BoxDecoration(
+              color: Colors.red,
+              shape: BoxShape.circle,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProfileButton(CompleteUser completeUser) {
+    return GestureDetector(
+      onTap: () => context.go('/profil'),
+      child: CircleAvatar(
+        radius: 18,
+        backgroundColor: const Color(0xFF2C50A4),
+        child: Text(
+          _getAvatarInitials(completeUser),
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _getAvatarInitials(CompleteUser user) {
+    final name = user.displayName;
+    if (name.isNotEmpty) {
+      final nameParts = name.split(' ');
+      if (nameParts.length >= 2) {
+        return '${nameParts[0][0]}${nameParts[1][0]}'.toUpperCase();
+      } else if (nameParts[0].isNotEmpty) {
+        return nameParts[0][0].toUpperCase();
+      }
+    }
+    return user.email != null && user.email!.isNotEmpty 
+        ? user.email![0].toUpperCase()
+        : 'U';
+  }
+
   /// ⚡ Section Actions rapides
   Widget _buildQuickActionsSection() {
     return Column(
@@ -412,6 +562,7 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget _buildQuickActionCard(QuickAction action) {
     return InkWell(
       onTap: () => context.go(action.route),
+      borderRadius: BorderRadius.circular(8),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -494,7 +645,8 @@ class _DashboardPageState extends State<DashboardPage> {
             'Voir tout',
             style: TextStyle(
               fontSize: 14,
-              color: Color.fromARGB(255, 44, 80, 164),
+              color: Color(0xFF2C50A4),
+              fontWeight: FontWeight.w500,
             ),
           ),
         ),
@@ -524,6 +676,13 @@ class _DashboardPageState extends State<DashboardPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Center(
         child: Column(
@@ -560,6 +719,7 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget _buildBookCard(Book book) {
     return InkWell(
       onTap: () => _handleBookClick(book.id),
+      borderRadius: BorderRadius.circular(8),
       child: Container(
         width: 140,
         height: 230,
@@ -582,7 +742,7 @@ class _DashboardPageState extends State<DashboardPage> {
               height: 120,
               width: double.infinity,
               decoration: BoxDecoration(
-                color: const Color.fromARGB(255, 44, 80, 164).withOpacity(0.1),
+                color: const Color(0xFF2C50A4).withOpacity(0.1),
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(8),
                   topRight: Radius.circular(8),
@@ -601,7 +761,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       book.categoryName,
                       style: const TextStyle(
                         fontSize: 10,
-                        color: Color.fromARGB(255, 44, 80, 164),
+                        color: Color(0xFF2C50A4),
                         fontWeight: FontWeight.w500,
                       ),
                       textAlign: TextAlign.center,
@@ -670,19 +830,15 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   /// 🎉 Carte de bienvenue
-  Widget _buildWelcomeCard() {
-    final userName = _currentUser?.name ?? 'Étudiant';
-    final userEmail = _currentUser?.email ?? '';
-    final userRole = _currentUser?.role;
-    
+  Widget _buildWelcomeCard(CompleteUser completeUser) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            const Color.fromARGB(255, 44, 80, 164),
-            const Color.fromARGB(255, 44, 80, 164).withOpacity(0.8),
+            const Color(0xFF2C50A4),
+            const Color(0xFF2C50A4).withOpacity(0.8),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -700,17 +856,17 @@ class _DashboardPageState extends State<DashboardPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Bienvenue, $userName!',
+            'Bienvenue, ${completeUser.displayName}!',
             style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: Colors.white,
             ),
           ),
-          if (userEmail.isNotEmpty) ...[
+          if (completeUser.email != null && completeUser.email!.isNotEmpty) ...[
             const SizedBox(height: 4),
             Text(
-              userEmail,
+              completeUser.email!,
               style: const TextStyle(
                 fontSize: 14,
                 color: Colors.white70,
@@ -729,46 +885,43 @@ class _DashboardPageState extends State<DashboardPage> {
           const SizedBox(height: 16),
           Row(
             children: [
-              if (userRole != null && userRole.name.isNotEmpty)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    userRole.name.toUpperCase(),
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Colors.white,
-                      fontWeight: FontWeight.w500,
-                    ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  completeUser.role.toUpperCase(),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
-              if (_apiService.isAuthenticated) ...[
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF10B981).withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Row(
-                    children: [
-                      Icon(Icons.verified, size: 12, color: Colors.white),
-                      SizedBox(width: 4),
-                      Text(
-                        'Connecté',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.white,
-                          fontWeight: FontWeight.w500,
-                        ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF10B981).withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.verified, size: 12, color: Colors.white),
+                    SizedBox(width: 4),
+                    Text(
+                      'Connecté',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w500,
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ],
           ),
         ],
@@ -794,7 +947,7 @@ class _DashboardPageState extends State<DashboardPage> {
         onTap: (index) => _onItemTapped(index, context),
         type: BottomNavigationBarType.fixed,
         backgroundColor: Colors.white,
-        selectedItemColor: const Color.fromARGB(255, 44, 80, 164),
+        selectedItemColor: const Color(0xFF2C50A4),
         unselectedItemColor: const Color(0xFF64748B),
         selectedFontSize: 12,
         unselectedFontSize: 12,

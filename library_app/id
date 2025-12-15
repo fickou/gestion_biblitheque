@@ -1,0 +1,377 @@
+Widget _buildStatsGrid() {
+    if (stats.isEmpty) {
+      return _buildEmptyStats();
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        int crossAxisCount = 2;
+        if (constraints.maxWidth > 1024) {
+          crossAxisCount = 6;
+        } else if (constraints.maxWidth > 768) {
+          crossAxisCount = 3;
+        }
+
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 1.0,
+          ),
+          itemCount: stats.length,
+          itemBuilder: (context, index) {
+            final stat = stats[index];
+            return StatCard(
+              title: stat.title,
+              value: stat.value,
+              icon: stat.icon,
+              trend: stat.trend,
+              trendUp: stat.trendUp,
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildEmptyStats() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        children: [
+          Icon(
+            Icons.bar_chart,
+            size: 48,
+            color: const Color(0xFFCBD5E1),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Aucune statistique disponible',
+            style: TextStyle(
+              fontSize: 16,
+              color: const Color(0xFF64748B),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Les données seront disponibles après les premières activités',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 12,
+              color: const Color(0xFF94A3B8),
+            ),
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: _loadData,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color.fromARGB(255, 44, 80, 164),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Actualiser'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTwoColumnSection() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth > 768) {
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: _buildRecentActivitiesCard()),
+              const SizedBox(width: 16),
+              Expanded(child: _buildTopBooksCard()),
+            ],
+          );
+        } else {
+          return Column(
+            children: [
+              _buildRecentActivitiesCard(),
+              const SizedBox(height: 16),
+              _buildTopBooksCard(),
+            ],
+          );
+        }
+      },
+    );
+  }
+
+  Widget _buildRecentActivitiesCard() {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: const Color(0xFFE2E8F0).withOpacity(0.4),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.trending_up, color: const Color.fromARGB(255, 44, 80, 164), size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Dernières Activités',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A)),
+                    ),
+                  ],
+                ),
+                IconButton(
+                  icon: const Icon(Icons.refresh, size: 18),
+                  color: const Color(0xFF64748B),
+                  onPressed: _loadData,
+                ),
+              ],
+            ),
+          ),
+          if (recentActivities.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 32),
+              child: Center(
+                child: Column(
+                  children: [
+                    Icon(Icons.notifications_none, size: 48, color: const Color(0xFFCBD5E1)),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Aucune activité récente',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: const Color(0xFF64748B),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextButton(
+                      onPressed: _loadData,
+                      child: const Text('Vérifier les nouvelles activités'),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                children: recentActivities.map((activity) {
+                  return ActivityItem(
+                    icon: activity.icon,
+                    title: activity.title,
+                    time: activity.time,
+                    iconColor: activity.iconColor,
+                  );
+                }).toList(),
+              ),
+            ),
+          const SizedBox(height: 16),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTopBooksCard() {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: const Color(0xFFE2E8F0).withOpacity(0.4),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.arrow_upward, color: const Color.fromARGB(255, 44, 80, 164), size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Livres les Plus Empruntés',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A)),
+                    ),
+                  ],
+                ),
+                IconButton(
+                  icon: const Icon(Icons.refresh, size: 18),
+                  color: const Color(0xFF64748B),
+                  onPressed: _loadData,
+                ),
+              ],
+            ),
+          ),
+          if (topBooks.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 32),
+              child: Center(
+                child: Column(
+                  children: [
+                    Icon(Icons.book_outlined, size: 48, color: const Color(0xFFCBD5E1)),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Aucun livre emprunté',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: const Color(0xFF64748B),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextButton(
+                      onPressed: () => context.go('/catalogue'),
+                      child: const Text('Voir le catalogue'),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: Column(
+                children: topBooks.map((book) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: TopBookCard(
+                      title: book.title,
+                      author: book.author,
+                      loans: book.loanCount,
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChartSection() {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: const Color(0xFFE2E8F0).withOpacity(0.4),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Statistiques par Catégorie',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A)),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.refresh, size: 18),
+                  color: const Color(0xFF64748B),
+                  onPressed: _loadData,
+                ),
+              ],
+            ),
+          ),
+          Container(
+            height: 200,
+            margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: categoryStats.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.auto_graph,
+                          size: 48,
+                          color: const Color(0xFFCBD5E1),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Aucune statistique par catégorie',
+                          style: TextStyle(fontSize: 14, color: const Color(0xFF64748B)),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: categoryStats.length,
+                    itemBuilder: (context, index) {
+                      final stat = categoryStats[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                stat.categoryName,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: const Color(0xFF0F172A),
+                                ),
+                              ),
+                            ),
+                            Text(
+                              '${stat.totalBooks} livres',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: const Color(0xFF64748B),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: stat.availableBooks > 0 ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                '${stat.availableBooks} dispo.',
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }

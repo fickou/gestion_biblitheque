@@ -355,7 +355,6 @@ web/
 
 # Logs and databases
 *.log
-*.sql
 *.sqlite
 *.db
 
@@ -429,3 +428,6 @@ lcov.info
 **/*.ipa
 **/*.apk
 **/*.aab
+
+#config file
+lib/config/api_url.dart

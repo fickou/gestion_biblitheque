@@ -1,35 +1,45 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '/models/user.dart';
-import '/services/api_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '/providers/auth_provider.dart';
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key});
   
-  void _handleLogout(BuildContext context) async {
+  void _handleLogout(BuildContext context, WidgetRef ref) async {
     try {
-      // Appeler la méthode logout du service
-      await ApiService().logout();
+      final authService = ref.read(authServiceProvider);
+      await authService.signOut();
       
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Déconnexion réussie")),
+        const SnackBar(
+          content: Text("Déconnexion réussie"),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+        ),
       );
       
-      // Utilisation de GoRouter pour la navigation
+      // Rediriger vers login
       context.go('/login');
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Erreur lors de la déconnexion: $e")),
+        SnackBar(
+          content: Text("Erreur lors de la déconnexion: $e"),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
       );
     }
   }
 
   @override
-  Widget build(BuildContext context) {
-    final user = ApiService().currentUser; // Récupérer l'utilisateur depuis ApiService
-
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Récupérer l'état d'authentification
+    final isAuthenticated = ref.watch(isLoggedInProvider);
+    final completeUserAsync = ref.watch(completeUserProvider);
+    
     // Vérifier si l'utilisateur est connecté
-    if (!ApiService().isAuthenticated || user == null) {
+    if (!isAuthenticated) {
       // Rediriger vers la page de connexion si non authentifié
       Future.delayed(Duration.zero, () {
         context.go('/login');
@@ -42,6 +52,60 @@ class ProfilePage extends StatelessWidget {
       );
     }
 
+    return completeUserAsync.when(
+      data: (completeUser) {
+        if (completeUser == null) {
+          return const Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
+        
+        return _buildProfileContent(context, ref, completeUser);
+      },
+      loading: () => const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      ),
+      error: (error, stack) {
+        print('❌ Erreur chargement profil: $error');
+        return Scaffold(
+          appBar: AppBar(
+            backgroundColor: const Color(0xFF2C50A4),
+            title: const Text("Mon profil"),
+          ),
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error, color: Colors.red, size: 50),
+                const SizedBox(height: 20),
+                const Text(
+                  'Erreur de chargement',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  error.toString(),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.grey),
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: () => ref.refresh(completeUserProvider),
+                  child: const Text('Réessayer'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+  
+  Widget _buildProfileContent(BuildContext context, WidgetRef ref, CompleteUser completeUser) {
     return Scaffold(
       // ----- AppBar -----
       appBar: AppBar(
@@ -64,7 +128,7 @@ class ProfilePage extends StatelessWidget {
                   radius: 40,
                   backgroundColor: const Color(0xFF2C50A4),
                   child: Text(
-                    _getAvatarText(user),
+                    _getAvatarText(completeUser),
                     style: const TextStyle(
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
@@ -74,14 +138,14 @@ class ProfilePage extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  user.name,
+                  completeUser.displayName,
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 Text(
-                  user.role.name ?? 'Utilisateur',
+                  completeUser.role,
                   style: const TextStyle(
                     color: Colors.grey,
                   ),
@@ -98,11 +162,13 @@ class ProfilePage extends StatelessWidget {
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
-                    _infoRow(Icons.mail_outline, "Email", user.email),
+                    _infoRow(Icons.mail_outline, "Email", completeUser.email ?? 'Non défini'),
                     const SizedBox(height: 8),
-                    _infoRow(Icons.confirmation_num, "Matricule", user.matricule ?? 'N/A'),
+                    _infoRow(Icons.confirmation_num, "Matricule", completeUser.matricule ?? 'N/A'),
                     const SizedBox(height: 8),
-                    _infoRow(Icons.shield_outlined, "Rôle", user.role.name ?? 'Utilisateur'),
+                    _infoRow(Icons.shield_outlined, "Rôle", completeUser.role),
+                    const SizedBox(height: 8),
+                    _infoRow(Icons.fingerprint, "UID", completeUser.uid),
                   ],
                 ),
               ),
@@ -112,19 +178,19 @@ class ProfilePage extends StatelessWidget {
 
             // --- Boutons ---
             _actionButton(context, Icons.person, "Modifier mon profil", onTap: () {
-              _showEditProfileDialog(context, user);
+              _showEditProfileDialog(context, completeUser);
             }),
             _actionButton(context, Icons.notifications_none, "Paramètres de notifications", onTap: () {
               _showNotificationSettings(context);
             }),
             _actionButton(context, Icons.settings, "Paramètres", onTap: () {
-              _showSettings(context);
+              _showSettings(context, completeUser);
             }),
 
             const SizedBox(height: 16),
 
             // --- Section Admin (si applicable) ---
-            if (user.role.name.toLowerCase() == 'admin' || user.role.name.toLowerCase() == 'administrateur')
+            if (completeUser.isAdmin)
               Column(
                 children: [
                   const Divider(),
@@ -167,7 +233,7 @@ class ProfilePage extends StatelessWidget {
                 "Se déconnecter",
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
-              onPressed: () => _handleLogout(context),
+              onPressed: () => _handleLogout(context, ref),
             ),
 
             const SizedBox(height: 16),
@@ -193,14 +259,14 @@ class ProfilePage extends StatelessWidget {
                     children: [
                       Icon(
                         Icons.circle,
-                        color: ApiService().isAuthenticated ? Colors.green : Colors.red,
+                        color: Colors.green,
                         size: 12,
                       ),
                       const SizedBox(width: 4),
-                      Text(
-                        ApiService().isAuthenticated ? "Connecté" : "Déconnecté",
+                      const Text(
+                        "Connecté",
                         style: TextStyle(
-                          color: ApiService().isAuthenticated ? Colors.green : Colors.red,
+                          color: Colors.green,
                           fontSize: 12,
                         ),
                       ),
@@ -246,32 +312,27 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  // Méthode pour déterminer l'index actuel
-  int _getCurrentIndex(BuildContext context) {
-    final location = GoRouterState.of(context).matchedLocation;
-    if (location == '/dashboard') return 0;
-    if (location == '/catalogue') return 1;
-    if (location == '/emprunts') return 2;
-    if (location == '/profil') return 3;
-    return 0;
-  }
-
-  // Navigation pour la bottom bar
-  void _onItemTapped(int index, BuildContext context) {
-    switch (index) {
-      case 0:
-        context.go('/dashboard');
-        break;
-      case 1:
-        context.go('/catalogue');
-        break;
-      case 2:
-        context.go('/emprunts');
-        break;
-      case 3:
-        context.go('/profil');
-        break;
+  // Méthode pour générer le texte de l'avatar
+  String _getAvatarText(CompleteUser user) {
+    final name = user.displayName;
+    if (name.isNotEmpty) {
+      final nameParts = name.split(' ');
+      if (nameParts.length >= 2) {
+        return '${nameParts[0][0]}${nameParts[1][0]}'.toUpperCase();
+      } else if (nameParts[0].isNotEmpty) {
+        return nameParts[0][0].toUpperCase();
+      }
     }
+    
+    // Vérifier avatarText dans MySQL
+    final mysqlAvatar = user.mysqlData['avatarText'];
+    if (mysqlAvatar != null && mysqlAvatar.toString().isNotEmpty) {
+      return mysqlAvatar.toString();
+    }
+    
+    return user.email != null && user.email!.isNotEmpty 
+        ? user.email![0].toUpperCase()
+        : 'U';
   }
 
   // Méthode utilitaire pour afficher les lignes d'info
@@ -323,26 +384,40 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  // Méthode pour générer le texte de l'avatar
-  String _getAvatarText(User user) {
-    if (user.name.isNotEmpty) {
-      // Prendre les initiales du nom
-      final nameParts = user.name.split(' ');
-      if (nameParts.length >= 2) {
-        return '${nameParts[0][0]}${nameParts[1][0]}'.toUpperCase();
-      } else if (nameParts[0].isNotEmpty) {
-        return nameParts[0][0].toUpperCase();
-      }
+  // Méthode pour déterminer l'index actuel
+  int _getCurrentIndex(BuildContext context) {
+    final location = GoRouterState.of(context).matchedLocation;
+    if (location == '/dashboard') return 0;
+    if (location == '/catalogue') return 1;
+    if (location == '/emprunts') return 2;
+    if (location == '/profil') return 3;
+    return 0;
+  }
+
+  // Navigation pour la bottom bar
+  void _onItemTapped(int index, BuildContext context) {
+    switch (index) {
+      case 0:
+        context.go('/dashboard');
+        break;
+      case 1:
+        context.go('/catalogue');
+        break;
+      case 2:
+        context.go('/emprunts');
+        break;
+      case 3:
+        context.go('/profil');
+        break;
     }
-    // Si pas de nom, utiliser l'email
-    if (user.email.isNotEmpty) {
-      return user.email[0].toUpperCase();
-    }
-    return '?';
   }
 
   // Méthodes pour les dialogues
-  void _showEditProfileDialog(BuildContext context, User user) {
+  void _showEditProfileDialog(BuildContext context, CompleteUser user) {
+    final nameController = TextEditingController(text: user.displayName);
+    final emailController = TextEditingController(text: user.email ?? '');
+    final matriculeController = TextEditingController(text: user.matricule ?? '');
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -356,7 +431,7 @@ class ProfilePage extends StatelessWidget {
                   labelText: "Nom complet",
                   hintText: "Entrez votre nom",
                 ),
-                controller: TextEditingController(text: user.name),
+                controller: nameController,
               ),
               const SizedBox(height: 16),
               TextField(
@@ -364,7 +439,8 @@ class ProfilePage extends StatelessWidget {
                   labelText: "Email",
                   hintText: "Entrez votre email",
                 ),
-                controller: TextEditingController(text: user.email),
+                controller: emailController,
+                enabled: false, // Email ne peut pas être modifié
               ),
               const SizedBox(height: 16),
               TextField(
@@ -372,7 +448,7 @@ class ProfilePage extends StatelessWidget {
                   labelText: "Matricule",
                   hintText: "Entrez votre matricule",
                 ),
-                controller: TextEditingController(text: user.matricule ?? ''),
+                controller: matriculeController,
               ),
             ],
           ),
@@ -384,10 +460,13 @@ class ProfilePage extends StatelessWidget {
           ),
           ElevatedButton(
             onPressed: () {
-              // TODO: Implémenter la mise à jour du profil
+              // TODO: Implémenter la mise à jour du profil via API
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("Fonctionnalité à venir")),
+                const SnackBar(
+                  content: Text("Fonctionnalité à venir"),
+                  behavior: SnackBarBehavior.floating,
+                ),
               );
             },
             child: const Text("Sauvegarder"),
@@ -437,7 +516,7 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  void _showSettings(BuildContext context) {
+  void _showSettings(BuildContext context, CompleteUser user) {
     showModalBottomSheet(
       context: context,
       builder: (context) => SafeArea(
@@ -474,7 +553,7 @@ class ProfilePage extends StatelessWidget {
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
                 Navigator.pop(context);
-                _showAboutDialog(context);
+                _showAboutDialog(context, user);
               },
             ),
           ],
@@ -483,7 +562,7 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  void _showAboutDialog(BuildContext context) {
+  void _showAboutDialog(BuildContext context, CompleteUser user) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -497,12 +576,13 @@ class ProfilePage extends StatelessWidget {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            Text("Version: 1.0.0"),
-            Text("Utilisateur: ${ApiService().currentUser?.name}"),
-            Text("Rôle: ${ApiService().currentUser?.role ?? 'Utilisateur'}"),
+            const Text("Version: 1.0.0"),
+            Text("Utilisateur: ${user.displayName}"),
+            Text("Rôle: ${user.role}"),
+            Text("Email: ${user.email ?? 'Non défini'}"),
             const SizedBox(height: 16),
             const Text(
-              "© 2024 Bibliothèque. Tous droits réservés.",
+              "© 2024 Bibliothèque Universitaire. Tous droits réservés.",
               style: TextStyle(color: Colors.grey, fontSize: 12),
             ),
           ],

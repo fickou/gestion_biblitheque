@@ -1,7 +1,7 @@
-import '/screens/admin/notification.dart';
-import '/screens/admin/profil.dart';
-import '/screens/admin/reservation.dart';
-import '/screens/admin/userdetail.dart';
+import '../screens/admin/notification.dart';
+import '../screens/admin/profil.dart';
+import '../screens/admin/reservation.dart';
+import '../screens/admin/userdetail.dart';
 import '/screens/admin/users.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -80,18 +80,6 @@ final routerProvider = Provider<GoRouter>((ref) {
           return '/admin/dashboard';
         } else {
           return '/dashboard';
-        }
-      }
-      
-      // 3. Vérifier les permissions pour les routes admin
-      if (user != null && isAdminRoute) {
-        final userData = await ref.read(authServiceProvider).getCurrentUserMySQLData();
-        final role = userData?['role'] ?? 'Étudiant';
-        
-        // Seuls les administrateurs et bibliothécaires peuvent accéder aux routes admin
-        if (role != 'Administrateur' && role != 'Bibliothécaire') {
-          // Accès refusé - rediriger vers le dashboard utilisateur avec un message
-          return '/dashboard?error=access_denied';
         }
       }
       

@@ -103,6 +103,7 @@ class ApiConfig {
   }
   
   static Uri getLoginUri() => Uri.parse(getUrl(Endpoints.login));
+  static Uri getLogoutUri() => Uri.parse(getUrl('logout'));
   static Uri getReturnBookUri() => Uri.parse(getUrl(Endpoints.returnBook));
   
   // Alternative: Méthode directe pour construire les URLs
