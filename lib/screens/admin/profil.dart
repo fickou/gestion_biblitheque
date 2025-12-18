@@ -486,7 +486,7 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
                 twoFactorAuth = value;
               });
             },
-            activeColor: const Color.fromARGB(255, 44, 80, 164),
+            activeThumbColor: const Color.fromARGB(255, 44, 80, 164),
           ),
         ),
       ],
@@ -509,7 +509,7 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
                 emailNotifications = value;
               });
             },
-            activeColor: const Color.fromARGB(255, 44, 80, 164),
+            activeThumbColor: const Color.fromARGB(255, 44, 80, 164),
           ),
         ),
         const SizedBox(height: 16),
@@ -523,7 +523,7 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
                 pushNotifications = value;
               });
             },
-            activeColor: const Color.fromARGB(255, 44, 80, 164),
+            activeThumbColor: const Color.fromARGB(255, 44, 80, 164),
           ),
         ),
         const SizedBox(height: 16),
@@ -537,7 +537,7 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
                 weeklySummary = value;
               });
             },
-            activeColor: const Color.fromARGB(255, 44, 80, 164),
+            activeThumbColor: const Color.fromARGB(255, 44, 80, 164),
           ),
         ),
       ],
@@ -560,7 +560,7 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
                 darkMode = value;
               });
             },
-            activeColor: const Color.fromARGB(255, 44, 80, 164),
+            activeThumbColor: const Color.fromARGB(255, 44, 80, 164),
           ),
         ),
         const SizedBox(height: 16),

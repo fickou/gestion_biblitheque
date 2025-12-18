@@ -7,7 +7,7 @@ import '/services/api_service.dart';
 class BookDetailPage extends StatefulWidget {
   final String id;
   
-  const BookDetailPage({Key? key, required this.id}) : super(key: key);
+  const BookDetailPage({super.key, required this.id});
   
   @override
   State<BookDetailPage> createState() => _BookDetailPageState();
@@ -377,26 +377,6 @@ class _BookDetailPageState extends State<BookDetailPage> {
                                     ),
                                   ),
                                 ),
-                                
-                                const SizedBox(width: 12),
-                                
-                                if (book.canBeBorrowed)
-                                  ElevatedButton.icon(
-                                    onPressed: _borrowBook,
-                                    icon: const Icon(Icons.bookmark_add, size: 18),
-                                    label: const Text('Emprunter'),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.green,
-                                      foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 20,
-                                        vertical: 12,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                    ),
-                                  ),
                                 
                                 const SizedBox(width: 12),
                                 

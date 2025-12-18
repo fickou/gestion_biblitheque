@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 class UserDetailPage extends StatefulWidget {
   final String id;
   
-  const UserDetailPage({Key? key, required this.id}) : super(key: key);
+  const UserDetailPage({super.key, required this.id});
   
   @override
   State<UserDetailPage> createState() => _UserDetailPageState();
