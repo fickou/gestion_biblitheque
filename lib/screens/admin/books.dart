@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gestion_bibliotheque/widgets/add_edit_book_form.dart';
 import '/models/book.dart';
 import '/widgets/notif.dart';
 import 'package:go_router/go_router.dart';
@@ -777,37 +778,38 @@ class _BooksAdminPageState extends State<BooksAdminPage> {
         break;
     }
   }
-  
-  void _showAddBookDialog() {
-    showModalBottomSheet(
+
+  void _showAddBookDialog() async {
+    final result = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-        ),
-        
-      ),
+      builder: (context) => const AddEditBookForm(),
     );
+
+    if (result == true) {
+      _refreshBooks();
+      _showSuccessSnackbar('Livre ajouté avec succès');
+    }
   }
   
-  void _showEditBookDialog(Book book) {
-    showModalBottomSheet(
+  void _showEditBookDialog(Book book) async {
+    final result = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-        ),
-      ),
+      builder: (context) => AddEditBookForm(book: book),
     );
+
+    if (result == true) {
+      _refreshBooks();
+      _showSuccessSnackbar('Livre modifié avec succès');
+    }
   }
 }
-
-// La classe AddEditBookForm reste inchangée (gardez-la telle quelle)

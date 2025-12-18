@@ -463,34 +463,18 @@ class __DashboardContentState extends ConsumerState<_DashboardContent> {
   }
 
   Widget _buildNotificationButton() {
-    return Stack(
-      children: [
-        IconButton(
-          icon: const Icon(Icons.notifications_outlined),
-          color: const Color(0xFF64748B),
-          onPressed: () {
-            // TODO: Implémenter les notifications
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Notifications - Fonctionnalité à venir'),
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          },
-        ),
-        Positioned(
-          right: 8,
-          top: 8,
-          child: Container(
-            width: 8,
-            height: 8,
-            decoration: const BoxDecoration(
-              color: Colors.red,
-              shape: BoxShape.circle,
-            ),
+    return IconButton(
+      icon: const Icon(Icons.notifications_outlined),
+      color: const Color(0xFF64748B),
+      onPressed: () {
+        // TODO: Implémenter les notifications
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Notifications - Fonctionnalité à venir'),
+            behavior: SnackBarBehavior.floating,
           ),
-        ),
-      ],
+        );
+      },
     );
   }
 

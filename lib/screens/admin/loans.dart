@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:gestion_bibliotheque/models/emprunt.dart';
+import 'package:gestion_bibliotheque/services/api_service.dart';
 import '/widgets/notif.dart';
 import 'package:go_router/go_router.dart';
 
@@ -10,76 +12,100 @@ class AdminLoansPage extends StatefulWidget {
 }
 
 class _AdminLoansPageState extends State<AdminLoansPage> {
-  final List<Map<String, dynamic>> loans = [
-    {
-      'id': 1,
-      'book': 'Le Petit Prince',
-      'user': 'Marie Dupont',
-      'borrowDate': '2024-01-10',
-      'returnDate': '2024-01-24',
-      'status': 'active'
-    },
-    {
-      'id': 2,
-      'book': '1984',
-      'user': 'Jean Martin',
-      'borrowDate': '2024-01-08',
-      'returnDate': '2024-01-22',
-      'status': 'active'
-    },
-    {
-      'id': 3,
-      'book': 'L\'Étranger',
-      'user': 'Sophie Laurent',
-      'borrowDate': '2023-12-20',
-      'returnDate': '2024-01-03',
-      'status': 'late'
-    },
-    {
-      'id': 4,
-      'book': 'Harry Potter',
-      'user': 'Pierre Dubois',
-      'borrowDate': '2024-01-12',
-      'returnDate': '2024-01-26',
-      'status': 'active'
-    },
-  ];
-
-  String searchQuery = '';
-  List<Map<String, dynamic>> filteredLoans = [];
+  final ApiService _apiService = ApiService();
+  List<Emprunt> _loans = [];
+  List<Emprunt> _filteredLoans = [];
+  bool _isLoading = true;
+  String _errorMessage = '';
+  String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
-    filteredLoans = List.from(loans);
+    _loadLoans();
   }
 
-  void _handleReturn(int id, String book) {
+  Future<void> _loadLoans() async {
     setState(() {
-      loans.removeWhere((loan) => loan['id'] == id);
-      filteredLoans.removeWhere((loan) => loan['id'] == id);
+      _isLoading = true;
+      _errorMessage = '';
     });
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('"$book" a été retourné'),
-        backgroundColor: Colors.green,
-      ),
-    );
+
+    try {
+      final loans = await _apiService.getEmprunts();
+      setState(() {
+        _loans = loans;
+        _filteredLoans = loans;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Erreur lors du chargement des emprunts: $e';
+        _isLoading = false;
+      });
+    }
   }
 
-  void _updateFilter() {
+  Future<void> _handleReturn(String empruntId, String bookTitle) async {
+    try {
+      final result = await _apiService.returnBook(empruntId);
+      
+      if (result['success'] == true) {
+        setState(() {
+          _loans.removeWhere((loan) => loan.id == empruntId);
+          _filteredLoans.removeWhere((loan) => loan.id == empruntId);
+        });
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('"$bookTitle" a été retourné avec succès'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result['message'] ?? 'Erreur lors du retour'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _updateFilter(String query) {
     setState(() {
-      filteredLoans = loans.where((loan) {
-        return loan['book'].toLowerCase().contains(searchQuery.toLowerCase()) ||
-               loan['user'].toLowerCase().contains(searchQuery.toLowerCase());
-      }).toList();
+      _searchQuery = query;
+      if (query.isEmpty) {
+        _filteredLoans = _loans;
+      } else {
+        _filteredLoans = _loans.where((loan) {
+          final bookTitle = loan.displayBookTitle.toLowerCase();
+          final userName = loan.displayUserName.toLowerCase();
+          final searchLower = query.toLowerCase();
+          return bookTitle.contains(searchLower) || userName.contains(searchLower);
+        }).toList();
+      }
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final lateCount = loans.where((loan) => loan['status'] == 'late').length;
+    // Calcul des retards basé sur le modèle
+    final lateCount = _loans.where((loan) => loan.isLate).length;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -88,18 +114,22 @@ class _AdminLoansPageState extends State<AdminLoansPage> {
           children: [
             _buildHeader(),
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildTitleSection(lateCount),
-                    const SizedBox(height: 16),
-                    _buildLoansCard(),
-                    const SizedBox(height: 80),
-                  ],
-                ),
-              ),
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _errorMessage.isNotEmpty
+                      ? Center(child: Text(_errorMessage))
+                      : SingleChildScrollView(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildTitleSection(lateCount),
+                              const SizedBox(height: 16),
+                              _buildLoansCard(),
+                              const SizedBox(height: 80),
+                            ],
+                          ),
+                        ),
             ),
           ],
         ),
@@ -132,12 +162,12 @@ class _AdminLoansPageState extends State<AdminLoansPage> {
             ),
           ),
           const Spacer(),
-         NotificationIconWithBadge(),
+          NotificationIconWithBadge(),
 
           IconButton(
             icon: const Icon(Icons.settings_outlined),
             color: const Color(0xFF64748B),
-            onPressed: () => context.go('/profiladmin'), // Ajouter cette ligne
+            onPressed: () => context.go('/profiladmin'),
           ),
         ],
       ),
@@ -165,7 +195,7 @@ class _AdminLoansPageState extends State<AdminLoansPage> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${loans.length} emprunts actifs',
+                    '${_loans.length} emprunts actifs',
                     style: TextStyle(
                       fontSize: 14,
                       color: const Color(0xFF64748B),
@@ -248,12 +278,7 @@ class _AdminLoansPageState extends State<AdminLoansPage> {
                       fontSize: 14,
                       color: const Color(0xFF0F172A),
                     ),
-                    onChanged: (value) {
-                      setState(() {
-                        searchQuery = value;
-                        _updateFilter();
-                      });
-                    },
+                    onChanged: _updateFilter,
                   ),
                 ),
               ],
@@ -262,30 +287,35 @@ class _AdminLoansPageState extends State<AdminLoansPage> {
           // Loans list in CardContent
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: Column(
-              children: filteredLoans.map((loan) {
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: const Color(0xFFE2E8F0),
-                      width: 1,
-                    ),
+            child: _filteredLoans.isEmpty 
+                ? const Center(child: Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: Text('Aucun emprunt trouvé'),
+                  ))
+                : Column(
+                    children: _filteredLoans.map((loan) {
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: const Color(0xFFE2E8F0),
+                            width: 1,
+                          ),
+                        ),
+                        child: _buildLoanItem(loan),
+                      );
+                    }).toList(),
                   ),
-                  child: _buildLoanItem(loan),
-                );
-              }).toList(),
-            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildLoanItem(Map<String, dynamic> loan) {
+  Widget _buildLoanItem(Emprunt loan) {
     return LayoutBuilder(
       builder: (context, constraints) {
         if (constraints.maxWidth < 640) {
@@ -314,7 +344,7 @@ class _AdminLoansPageState extends State<AdminLoansPage> {
                             ),
                           ),
                           Text(
-                            loan['borrowDate'],
+                            loan.formattedBorrowDate,
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w500,
@@ -334,7 +364,7 @@ class _AdminLoansPageState extends State<AdminLoansPage> {
                             ),
                           ),
                           Text(
-                            loan['returnDate'],
+                            loan.formattedReturnDate ?? 'N/A',
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w500,
@@ -378,7 +408,7 @@ class _AdminLoansPageState extends State<AdminLoansPage> {
                             ),
                           ),
                           Text(
-                            loan['borrowDate'],
+                            loan.formattedBorrowDate,
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w500,
@@ -399,7 +429,7 @@ class _AdminLoansPageState extends State<AdminLoansPage> {
                             ),
                           ),
                           Text(
-                            loan['returnDate'],
+                            loan.formattedReturnDate ?? 'N/A',
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w500,
@@ -422,12 +452,12 @@ class _AdminLoansPageState extends State<AdminLoansPage> {
     );
   }
 
-  Widget _buildLoanInfo(Map<String, dynamic> loan) {
+  Widget _buildLoanInfo(Emprunt loan) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          loan['book'],
+          loan.displayBookTitle,
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
@@ -438,7 +468,7 @@ class _AdminLoansPageState extends State<AdminLoansPage> {
         ),
         const SizedBox(height: 4),
         Text(
-          loan['user'],
+          loan.displayUserName,
           style: TextStyle(
             fontSize: 14,
             color: const Color(0xFF64748B),
@@ -450,13 +480,13 @@ class _AdminLoansPageState extends State<AdminLoansPage> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
-            color: loan['status'] == 'late'
+            color: loan.isLate
                 ? const Color(0xFFEF4444)
                 : const Color.fromARGB(255, 44, 80, 164),
             borderRadius: BorderRadius.circular(4),
           ),
           child: Text(
-            loan['status'] == 'late' ? 'En retard' : 'En cours',
+            loan.isLate ? 'En retard' : 'En cours',
             style: const TextStyle(
               color: Colors.white,
               fontSize: 12,
@@ -468,11 +498,11 @@ class _AdminLoansPageState extends State<AdminLoansPage> {
     );
   }
 
-  Widget _buildReturnButton(Map<String, dynamic> loan, {required bool isMobile}) {
+  Widget _buildReturnButton(Emprunt loan, {required bool isMobile}) {
     return SizedBox(
       width: isMobile ? double.infinity : null,
       child: OutlinedButton(
-        onPressed: () => _handleReturn(loan['id'], loan['book']),
+        onPressed: () => _handleReturn(loan.id, loan.displayBookTitle),
         style: OutlinedButton.styleFrom(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           side: BorderSide(color: const Color(0xFFE2E8F0)),

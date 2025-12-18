@@ -685,6 +685,37 @@ class ApiService {
     };
   }
 
+  // Méthodes de mise à jour (ajoutées)
+  Future<Map<String, dynamic>> updateUserStatus(String userId, String status) async {
+    try {
+      final response = await http.put(
+        ApiConfig.getUserUri(userId),
+        headers: _getHeaders(),
+        body: jsonEncode({'status': status}),
+      );
+
+      final data = jsonDecode(response.body);
+      return data;
+    } catch (e) {
+      return {'success': false, 'message': 'Erreur: $e'};
+    }
+  }
+
+  Future<Map<String, dynamic>> updateReservationStatus(String reservationId, String status) async {
+    try {
+      final response = await http.put(
+        ApiConfig.getReservationUri(reservationId),
+        headers: _getHeaders(),
+        body: jsonEncode({'status': status}),
+      );
+
+      final data = jsonDecode(response.body);
+      return data;
+    } catch (e) {
+      return {'success': false, 'message': 'Erreur: $e'};
+    }
+  }
+
   bool get isAuthenticated => FirebaseAuth.instance.currentUser != null;
   
 }

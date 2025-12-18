@@ -62,6 +62,7 @@ class ApiConfig {
   static Uri getLateEmpruntsUri() => Uri.parse(getUrl(Endpoints.lateEmprunts));
   
   static Uri getReservationsUri() => Uri.parse(getUrl(Endpoints.reservations));
+  static Uri getReservationUri(String id) => Uri.parse(getUrl('${Endpoints.reservations}/$id'));
   static Uri getPendingReservationsUri() => 
       Uri.parse(getUrl(Endpoints.pendingReservations));
   

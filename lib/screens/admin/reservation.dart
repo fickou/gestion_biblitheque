@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:gestion_bibliotheque/models/reservation.dart';
+import 'package:gestion_bibliotheque/services/api_service.dart';
 import '/widgets/notif.dart';
 import 'package:go_router/go_router.dart';
 
@@ -10,47 +12,23 @@ class AdminReservationsPage extends StatefulWidget {
 }
 
 class _AdminReservationsPageState extends State<AdminReservationsPage> {
+  final ApiService _apiService = ApiService();
   final TextEditingController _searchController = TextEditingController();
+  
+  List<Reservation> _reservations = [];
+  List<Reservation> _filteredReservations = [];
+  bool _isLoading = true;
+  String _errorMessage = '';
   String _searchQuery = '';
-
-  // Données de réservation simulées
-  List<Map<String, dynamic>> _reservations = [
-    {
-      'id': 1,
-      'book': 'L\'Étranger',
-      'user': 'Marie Dupont',
-      'reserveDate': '2024-01-15',
-      'status': 'pending',
-    },
-    {
-      'id': 2,
-      'book': 'Le Seigneur des Anneaux',
-      'user': 'Jean Martin',
-      'reserveDate': '2024-01-14',
-      'status': 'ready',
-    },
-    {
-      'id': 3,
-      'book': 'Harry Potter',
-      'user': 'Sophie Laurent',
-      'reserveDate': '2024-01-13',
-      'status': 'pending',
-    },
-    {
-      'id': 4,
-      'book': '1984',
-      'user': 'Pierre Dubois',
-      'reserveDate': '2024-01-12',
-      'status': 'ready',
-    },
-  ];
 
   @override
   void initState() {
     super.initState();
+    _loadReservations();
     _searchController.addListener(() {
       setState(() {
         _searchQuery = _searchController.text;
+        _updateFilter();
       });
     });
   }
@@ -61,55 +39,49 @@ class _AdminReservationsPageState extends State<AdminReservationsPage> {
     super.dispose();
   }
 
-  List<Map<String, dynamic>> get _filteredReservations {
-    if (_searchQuery.isEmpty) return _reservations;
-    
-    return _reservations.where((res) {
-      final book = res['book'].toString().toLowerCase();
-      final user = res['user'].toString().toLowerCase();
-      final query = _searchQuery.toLowerCase();
-      
-      return book.contains(query) || user.contains(query);
-    }).toList();
-  }
-
-  int get _readyCount {
-    return _reservations.where((res) => res['status'] == 'ready').length;
-  }
-
-  void _handleValidate(int id, String book) {
+  Future<void> _loadReservations() async {
     setState(() {
-      _reservations = _reservations.map((res) {
-        if (res['id'] == id) {
-          return {...res, 'status': 'ready'};
-        }
-        return res;
+      _isLoading = true;
+      _errorMessage = '';
+    });
+
+    try {
+      final reservations = await _apiService.getReservations();
+      setState(() {
+        _reservations = reservations;
+        _isLoading = false;
+        _updateFilter();
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Erreur lors du chargement des réservations: $e';
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _updateFilter() {
+    if (_searchQuery.isEmpty) {
+      _filteredReservations = _reservations;
+    } else {
+      _filteredReservations = _reservations.where((res) {
+        final book = res.bookTitle.toLowerCase();
+        final user = res.userName.toLowerCase();
+        final query = _searchQuery.toLowerCase();
+        return book.contains(query) || user.contains(query);
       }).toList();
-    });
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Réservation de "$book" prête pour retrait'),
-        backgroundColor: Colors.green,
-      ),
-    );
+    }
   }
 
-  void _handleCancel(int id, String book) {
-    setState(() {
-      _reservations.removeWhere((res) => res['id'] == id);
-    });
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Réservation de "$book" annulée'),
-        backgroundColor: Colors.green,
-      ),
-    );
-  }
+  // NOTE: L'API actuelle ne semble pas avoir de méthode pour valider ou annuler une réservation.
+  // Je vais afficher des messages indiquant que la fonctionnalité nécessite une intégration API.
+  
+
 
   @override
   Widget build(BuildContext context) {
+    final readyCount = _reservations.where((res) => res.status == 'ready' || res.status.toLowerCase() == 'prête').length;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       body: SafeArea(
@@ -118,446 +90,462 @@ class _AdminReservationsPageState extends State<AdminReservationsPage> {
             // Header
             _buildHeader(context),
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // En-tête avec titre et badge
-                    LayoutBuilder(
-                      builder: (context, constraints) {
-                        if (constraints.maxWidth < 500) {
-                          return Column(
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _errorMessage.isNotEmpty
+                      ? Center(child: Text(_errorMessage))
+                      : SingleChildScrollView(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
-                                'Gestion des réservations',
-                                style: TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF0F172A),
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                '${_reservations.length} réservation${_reservations.length > 1 ? 's' : ''} active${_reservations.length > 1 ? 's' : ''}',
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  color: Color(0xFF64748B),
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              if (_readyCount > 0)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                  decoration: BoxDecoration(
-                                    color: const Color.fromARGB(255, 44, 80, 164),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: Text(
-                                    '$_readyCount prête${_readyCount > 1 ? 's' : ''} pour retrait',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
+                              _buildTitleSection(readyCount),
+                              const SizedBox(height: 24),
+                              _buildSearchAndList(),
+                              const SizedBox(height: 32),
                             ],
-                          );
-                        } else {
-                          return Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Gestion des réservations',
-                                    style: TextStyle(
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFF0F172A),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    '${_reservations.length} réservation${_reservations.length > 1 ? 's' : ''} active${_reservations.length > 1 ? 's' : ''}',
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      color: Color(0xFF64748B),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              if (_readyCount > 0)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                  decoration: BoxDecoration(
-                                    color: const Color.fromARGB(255, 44, 80, 164),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: Text(
-                                    '$_readyCount prête${_readyCount > 1 ? 's' : ''} pour retrait',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          );
-                        }
-                      },
-                    ),
-                    
-                    const SizedBox(height: 24),
-                    
-                    // Carte de recherche et liste
-                    Card(
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Barre de recherche
-                          Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.search,
-                                  size: 20,
-                                  color: Color(0xFF64748B),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: TextField(
-                                    controller: _searchController,
-                                    decoration: const InputDecoration(
-                                      hintText: 'Rechercher par livre ou utilisateur...',
-                                      border: InputBorder.none,
-                                      contentPadding: EdgeInsets.zero,
-                                      hintStyle: TextStyle(
-                                        fontSize: 14,
-                                        color: Color(0xFF64748B),
-                                      ),
-                                    ),
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      color: Color(0xFF0F172A),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
                           ),
-                          
-                          // Liste des réservations
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                            child: Column(
-                              children: _filteredReservations.map((reservation) {
-                                final isReady = reservation['status'] == 'ready';
-                                
-                                return LayoutBuilder(
-                                  builder: (context, constraints) {
-                                    if (constraints.maxWidth < 500) {
-                                      // Version mobile
-                                      return Container(
-                                        margin: const EdgeInsets.only(bottom: 12),
-                                        padding: const EdgeInsets.all(16),
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          borderRadius: BorderRadius.circular(8),
-                                          border: Border.all(
-                                            color: const Color(0xFFE5E7EB),
-                                          ),
-                                        ),
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            // Titre du livre
-                                            Text(
-                                              reservation['book'],
-                                              style: const TextStyle(
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w600,
-                                                color: Color(0xFF0F172A),
-                                              ),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                            const SizedBox(height: 4),
-                                            // Nom d'utilisateur
-                                            Text(
-                                              reservation['user'],
-                                              style: const TextStyle(
-                                                fontSize: 12,
-                                                color: Color(0xFF64748B),
-                                              ),
-                                            ),
-                                            const SizedBox(height: 12),
-                                            // Badge de statut
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(
-                                                horizontal: 8,
-                                                vertical: 4,
-                                              ),
-                                              decoration: BoxDecoration(
-                                                color: isReady
-                                                    ? const Color.fromARGB(255, 44, 80, 164)
-                                                    : const Color(0xFFF1F5F9),
-                                                borderRadius: BorderRadius.circular(4),
-                                              ),
-                                              child: Text(
-                                                isReady ? 'Prête' : 'En attente',
-                                                style: TextStyle(
-                                                  fontSize: 11,
-                                                  color: isReady ? Colors.white : const Color(0xFF64748B),
-                                                  fontWeight: FontWeight.w500,
-                                                ),
-                                              ),
-                                            ),
-                                            const SizedBox(height: 12),
-                                            // Date et boutons
-                                            Row(
-                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                              children: [
-                                                Column(
-                                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                                  children: [
-                                                    const Text(
-                                                      'Réservé le',
-                                                      style: TextStyle(
-                                                        fontSize: 11,
-                                                        color: Color(0xFF64748B),
-                                                      ),
-                                                    ),
-                                                    Text(
-                                                      reservation['reserveDate'],
-                                                      style: const TextStyle(
-                                                        fontSize: 12,
-                                                        fontWeight: FontWeight.w500,
-                                                        color: Color(0xFF0F172A),
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                                Row(
-                                                  children: [
-                                                    if (!isReady)
-                                                      Container(
-                                                        constraints: const BoxConstraints(
-                                                          minWidth: 80,
-                                                        ),
-                                                        child: OutlinedButton.icon(
-                                                          onPressed: () => _handleValidate(
-                                                            reservation['id'],
-                                                            reservation['book'],
-                                                          ),
-                                                          icon: const Icon(
-                                                            Icons.check,
-                                                            size: 14,
-                                                          ),
-                                                          label: const Text('Prête'),
-                                                          style: OutlinedButton.styleFrom(
-                                                            padding: const EdgeInsets.symmetric(
-                                                              horizontal: 12,
-                                                              vertical: 8,
-                                                            ),
-                                                            side: const BorderSide(color: Color(0xFFE5E7EB)),
-                                                            shape: RoundedRectangleBorder(
-                                                              borderRadius: BorderRadius.circular(6),
-                                                            ),
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    if (!isReady) const SizedBox(width: 8),
-                                                    OutlinedButton(
-                                                      onPressed: () => _handleCancel(
-                                                        reservation['id'],
-                                                        reservation['book'],
-                                                      ),
-                                                      style: OutlinedButton.styleFrom(
-                                                        padding: const EdgeInsets.all(8),
-                                                        side: const BorderSide(color: Color(0xFFE5E7EB)),
-                                                        shape: RoundedRectangleBorder(
-                                                          borderRadius: BorderRadius.circular(6),
-                                                        ),
-                                                      ),
-                                                      child: const Icon(
-                                                        Icons.close,
-                                                        size: 14,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ],
-                                            ),
-                                          ],
-                                        ),
-                                      );
-                                    } else {
-                                      // Version desktop
-                                      return Container(
-                                        margin: const EdgeInsets.only(bottom: 12),
-                                        padding: const EdgeInsets.all(16),
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          borderRadius: BorderRadius.circular(8),
-                                          border: Border.all(
-                                            color: const Color(0xFFE5E7EB),
-                                          ),
-                                        ),
-                                        child: Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            // Informations du livre et utilisateur
-                                            Expanded(
-                                              child: Column(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
-                                                children: [
-                                                  Text(
-                                                    reservation['book'],
-                                                    style: const TextStyle(
-                                                      fontSize: 14,
-                                                      fontWeight: FontWeight.w600,
-                                                      color: Color(0xFF0F172A),
-                                                    ),
-                                                    maxLines: 1,
-                                                    overflow: TextOverflow.ellipsis,
-                                                  ),
-                                                  const SizedBox(height: 4),
-                                                  Text(
-                                                    reservation['user'],
-                                                    style: const TextStyle(
-                                                      fontSize: 12,
-                                                      color: Color(0xFF64748B),
-                                                    ),
-                                                  ),
-                                                  const SizedBox(height: 8),
-                                                  Container(
-                                                    padding: const EdgeInsets.symmetric(
-                                                      horizontal: 8,
-                                                      vertical: 4,
-                                                    ),
-                                                    decoration: BoxDecoration(
-                                                      color: isReady
-                                                          ? const Color.fromARGB(255, 44, 80, 164)
-                                                          : const Color(0xFFF1F5F9),
-                                                      borderRadius: BorderRadius.circular(4),
-                                                    ),
-                                                    child: Text(
-                                                      isReady ? 'Prête' : 'En attente',
-                                                      style: TextStyle(
-                                                        fontSize: 11,
-                                                        color: isReady ? Colors.white : const Color(0xFF64748B),
-                                                        fontWeight: FontWeight.w500,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                            // Date et boutons
-                                            Row(
-                                              children: [
-                                                Column(
-                                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                                  children: [
-                                                    const Text(
-                                                      'Réservé le',
-                                                      style: TextStyle(
-                                                        fontSize: 11,
-                                                        color: Color(0xFF64748B),
-                                                      ),
-                                                    ),
-                                                    Text(
-                                                      reservation['reserveDate'],
-                                                      style: const TextStyle(
-                                                        fontSize: 12,
-                                                        fontWeight: FontWeight.w500,
-                                                        color: Color(0xFF0F172A),
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                                const SizedBox(width: 24),
-                                                Row(
-                                                  children: [
-                                                    if (!isReady)
-                                                      OutlinedButton.icon(
-                                                        onPressed: () => _handleValidate(
-                                                          reservation['id'],
-                                                          reservation['book'],
-                                                        ),
-                                                        icon: const Icon(
-                                                          Icons.check,
-                                                          size: 14,
-                                                        ),
-                                                        label: const Text('Prête'),
-                                                        style: OutlinedButton.styleFrom(
-                                                          padding: const EdgeInsets.symmetric(
-                                                            horizontal: 16,
-                                                            vertical: 8,
-                                                          ),
-                                                          side: const BorderSide(color: Color(0xFFE5E7EB)),
-                                                          shape: RoundedRectangleBorder(
-                                                            borderRadius: BorderRadius.circular(6),
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    if (!isReady) const SizedBox(width: 8),
-                                                    OutlinedButton(
-                                                      onPressed: () => _handleCancel(
-                                                        reservation['id'],
-                                                        reservation['book'],
-                                                      ),
-                                                      style: OutlinedButton.styleFrom(
-                                                        padding: const EdgeInsets.symmetric(
-                                                          horizontal: 16,
-                                                          vertical: 8,
-                                                        ),
-                                                        side: const BorderSide(color: Color(0xFFE5E7EB)),
-                                                        shape: RoundedRectangleBorder(
-                                                          borderRadius: BorderRadius.circular(6),
-                                                        ),
-                                                      ),
-                                                      child: const Icon(
-                                                        Icons.close,
-                                                        size: 14,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ],
-                                            ),
-                                          ],
-                                        ),
-                                      );
-                                    }
-                                  },
-                                );
-                              }).toList(),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    
-                    const SizedBox(height: 32),
-                  ],
-                ),
-              ),
+                        ),
             ),
           ],
         ),
       ),
       bottomNavigationBar: _buildBottomNav(context),
+    );
+  }
+
+  Widget _buildTitleSection(int readyCount) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 500) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Gestion des réservations',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${_reservations.length} réservation${_reservations.length > 1 ? 's' : ''} active${_reservations.length > 1 ? 's' : ''}',
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Color(0xFF64748B),
+                ),
+              ),
+              const SizedBox(height: 12),
+              if (readyCount > 0)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color.fromARGB(255, 44, 80, 164),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '$readyCount prête${readyCount > 1 ? 's' : ''} pour retrait',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+            ],
+          );
+        } else {
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Gestion des réservations',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${_reservations.length} réservation${_reservations.length > 1 ? 's' : ''} active${_reservations.length > 1 ? 's' : ''}',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                ],
+              ),
+              if (readyCount > 0)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color.fromARGB(255, 44, 80, 164),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '$readyCount prête${readyCount > 1 ? 's' : ''} pour retrait',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+            ],
+          );
+        }
+      },
+    );
+  }
+
+  Widget _buildSearchAndList() {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Barre de recherche
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.search,
+                  size: 20,
+                  color: Color(0xFF64748B),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: const InputDecoration(
+                      hintText: 'Rechercher par livre ou utilisateur...',
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
+                      hintStyle: TextStyle(
+                        fontSize: 14,
+                        color: Color(0xFF64748B),
+                      ),
+                    ),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          // Liste des réservations
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: _filteredReservations.isEmpty
+                ? const Center(child: Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Text('Aucune réservation trouvée'),
+                  ))
+                : Column(
+                    children: _filteredReservations.map((reservation) {
+                      return _buildReservationItem(reservation);
+                    }).toList(),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReservationItem(Reservation reservation) {
+    final isReady = reservation.status == 'ready' || reservation.status.toLowerCase() == 'prête';
+    
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 500) {
+          // Version mobile
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: const Color(0xFFE5E7EB),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Titre du livre
+                Text(
+                  reservation.bookTitle,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF0F172A),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                // Nom d'utilisateur
+                Text(
+                  reservation.userName,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                // Badge de statut
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isReady
+                        ? const Color.fromARGB(255, 44, 80, 164)
+                        : const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    isReady ? 'Prête' : reservation.status,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: isReady ? Colors.white : const Color(0xFF64748B),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                // Date et boutons
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Réservé le',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFF64748B),
+                          ),
+                        ),
+                        Text(
+                          reservation.formattedReserveDate ?? 'N/A',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF0F172A),
+                          ),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        if (!isReady)
+                          Container(
+                            constraints: const BoxConstraints(
+                              minWidth: 80,
+                            ),
+                            child: OutlinedButton.icon(
+                              onPressed: () => _handleValidate(
+                                reservation.id,
+                                reservation.bookTitle,
+                              ),
+                              icon: const Icon(
+                                Icons.check,
+                                size: 14,
+                              ),
+                              label: const Text('Prête'),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
+                                side: const BorderSide(color: Color(0xFFE5E7EB)),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                              ),
+                            ),
+                          ),
+                        if (!isReady) const SizedBox(width: 8),
+                        OutlinedButton(
+                          onPressed: () => _handleCancel(
+                            reservation.id,
+                            reservation.bookTitle,
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.all(8),
+                            side: const BorderSide(color: Color(0xFFE5E7EB)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.close,
+                            size: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          );
+        } else {
+          // Version desktop
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: const Color(0xFFE5E7EB),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // Informations du livre et utilisateur
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        reservation.bookTitle,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF0F172A),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        reservation.userName,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF64748B),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isReady
+                              ? const Color.fromARGB(255, 44, 80, 164)
+                              : const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          isReady ? 'Prête' : reservation.status,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: isReady ? Colors.white : const Color(0xFF64748B),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Date et boutons
+                Row(
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        const Text(
+                          'Réservé le',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFF64748B),
+                          ),
+                        ),
+                        Text(
+                          reservation.formattedReserveDate ?? 'N/A',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF0F172A),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(width: 24),
+                    Row(
+                      children: [
+                        if (!isReady)
+                          OutlinedButton.icon(
+                            onPressed: () => _handleValidate(
+                              reservation.id,
+                              reservation.bookTitle,
+                            ),
+                            icon: const Icon(
+                              Icons.check,
+                              size: 14,
+                            ),
+                            label: const Text('Prête'),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                              side: const BorderSide(color: Color(0xFFE5E7EB)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                            ),
+                          ),
+                        if (!isReady) const SizedBox(width: 8),
+                        OutlinedButton(
+                          onPressed: () => _handleCancel(
+                            reservation.id,
+                            reservation.bookTitle,
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
+                            side: const BorderSide(color: Color(0xFFE5E7EB)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.close,
+                            size: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          );
+        }
+      },
     );
   }
   
@@ -649,6 +637,86 @@ class _AdminReservationsPageState extends State<AdminReservationsPage> {
     );
   }
   
+  void _handleValidate(String id, String bookTitle) async {
+    try {
+      final result = await _apiService.updateReservationStatus(id, 'Confirmée');
+      if (mounted) {
+        if (result['success'] == true) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Réservation confirmée pour $bookTitle')),
+          );
+          _loadReservations();
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Erreur: ${result['message']}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur lors de la validation: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _handleCancel(String id, String bookTitle) async {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Annuler la réservation'),
+        content: Text('Voulez-vous vraiment annuler la réservation pour "$bookTitle" ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Non'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              try {
+                final result = await _apiService.updateReservationStatus(id, 'Annulée');
+                if (mounted) {
+                  if (result['success'] == true) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Réservation annulée pour $bookTitle')),
+                    );
+                    _loadReservations();
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Erreur: ${result['message']}'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Erreur lors de l\'annulation: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Oui, annuler'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _onItemTapped(int index, BuildContext context) {
     switch (index) {
       case 0:
@@ -669,3 +737,4 @@ class _AdminReservationsPageState extends State<AdminReservationsPage> {
     }
   }
 }
+

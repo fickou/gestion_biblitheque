@@ -28,6 +28,7 @@ class _StudentsPageContentState extends ConsumerState<_StudentsPageContent> {
   bool _isLoading = true;
   String? _error;
   Map<String, int> userEmpruntsCount = {};
+  Map<String, int> userReservationsCount = {};
 
   @override
   void initState() {
@@ -44,6 +45,8 @@ class _StudentsPageContentState extends ConsumerState<_StudentsPageContent> {
     try {
       final users = await _apiService.getUsers();
       
+      final reservations = await _apiService.getReservations();
+      
       // Compter les emprunts par utilisateur
       for (final user in users) {
         try {
@@ -53,6 +56,15 @@ class _StudentsPageContentState extends ConsumerState<_StudentsPageContent> {
           userEmpruntsCount[user.id] = 0;
         }
       }
+
+      // Compter les réservations par utilisateur
+      Map<String, int> tempReservationsCount = {};
+      for (final reservation in reservations) {
+        if (reservation.user != null) {
+          tempReservationsCount[reservation.user!.id] = (tempReservationsCount[reservation.user!.id] ?? 0) + 1;
+        }
+      }
+      userReservationsCount = tempReservationsCount;
       
       setState(() {
         userList = users;
@@ -324,33 +336,17 @@ class _StudentsPageContentState extends ConsumerState<_StudentsPageContent> {
   }
 
   Widget _buildNotificationButton() {
-    return Stack(
-      children: [
-        IconButton(
-          icon: const Icon(Icons.notifications_outlined),
-          color: const Color(0xFF64748B),
-          onPressed: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Notifications - Fonctionnalité à venir'),
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          },
-        ),
-        Positioned(
-          right: 8,
-          top: 8,
-          child: Container(
-            width: 8,
-            height: 8,
-            decoration: const BoxDecoration(
-              color: Colors.red,
-              shape: BoxShape.circle,
-            ),
+    return IconButton(
+      icon: const Icon(Icons.notifications_outlined),
+      color: const Color(0xFF64748B),
+      onPressed: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Notifications - Fonctionnalité à venir'),
+            behavior: SnackBarBehavior.floating,
           ),
-        ),
-      ],
+        );
+      },
     );
   }
 
@@ -650,21 +646,22 @@ class _StudentsPageContentState extends ConsumerState<_StudentsPageContent> {
 
   Widget _buildStatsAndActions(User user) {
     final empruntsCount = userEmpruntsCount[user.id] ?? 0;
+    final reservationsCount = userReservationsCount[user.id] ?? 0;
     
     return LayoutBuilder(
       builder: (context, constraints) {
         if (constraints.maxWidth < 640) {
           return Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildStatsSection(empruntsCount),
+             children: [
+              _buildStatsSection(empruntsCount, reservationsCount),
               _buildActionButtons(user),
             ],
           );
         } else {
           return Row(
             children: [
-              _buildStatsSection(empruntsCount),
+              _buildStatsSection(empruntsCount, reservationsCount),
               const SizedBox(width: 24),
               _buildActionButtons(user),
             ],
@@ -674,7 +671,7 @@ class _StudentsPageContentState extends ConsumerState<_StudentsPageContent> {
     );
   }
 
-  Widget _buildStatsSection(int empruntsCount) {
+  Widget _buildStatsSection(int empruntsCount, int reservationsCount) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
@@ -706,9 +703,9 @@ class _StudentsPageContentState extends ConsumerState<_StudentsPageContent> {
           const SizedBox(width: 16),
           Column(
             children: [
-              const Text(
-                '0',
-                style: TextStyle(
+              Text(
+                '$reservationsCount',
+                style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF0F172A),
