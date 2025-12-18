@@ -169,7 +169,7 @@ class User {
     if (parts.length >= 2) {
       final first = parts[0].isNotEmpty ? parts[0][0] : '';
       final second = parts[1].isNotEmpty ? parts[1][0] : '';
-      return '${first}${second}'.toUpperCase();
+      return '$first$second'.toUpperCase();
     }
     final length = name.length;
     if (length >= 2) {

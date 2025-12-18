@@ -3,7 +3,7 @@ import '/widgets/notif.dart';
 import 'package:go_router/go_router.dart';
 
 class AdminReservationsPage extends StatefulWidget {
-  const AdminReservationsPage({Key? key}) : super(key: key);
+  const AdminReservationsPage({super.key});
 
   @override
   State<AdminReservationsPage> createState() => _AdminReservationsPageState();

@@ -299,7 +299,7 @@ class _SignupState extends ConsumerState<Signup> {
                               const SizedBox(height: 20),
 
                               DropdownButtonFormField(
-                                value: _selectedRole,
+                                initialValue: _selectedRole,
                                 items: [
                                   'Étudiant',
                                   'Enseignant',

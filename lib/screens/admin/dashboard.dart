@@ -114,7 +114,7 @@ class __AdminDashboardContentState extends ConsumerState<_AdminDashboardContent>
         title: 'Livres',
         value: totalBooks.toString(),
         icon: Icons.book,
-        trend: '${booksTrend}%',
+        trend: '$booksTrend%',
         trendUp: booksTrend >= 0,
       ));
       
@@ -122,7 +122,7 @@ class __AdminDashboardContentState extends ConsumerState<_AdminDashboardContent>
         title: 'Utilisateurs',
         value: totalUsers.toString(),
         icon: Icons.people,
-        trend: '${usersTrend}%',
+        trend: '$usersTrend%',
         trendUp: usersTrend >= 0,
       ));
       
@@ -130,7 +130,7 @@ class __AdminDashboardContentState extends ConsumerState<_AdminDashboardContent>
         title: 'Emprunts actifs',
         value: activeBorrowings.toString(),
         icon: Icons.description,
-        trend: '${borrowingsTrend}%',
+        trend: '$borrowingsTrend%',
         trendUp: borrowingsTrend >= 0,
       ));
       
@@ -138,7 +138,7 @@ class __AdminDashboardContentState extends ConsumerState<_AdminDashboardContent>
         title: 'Retours en attente',
         value: pendingReturns.toString(),
         icon: Icons.pending_actions,
-        trend: '${returnsTrend}%',
+        trend: '$returnsTrend%',
         trendUp: returnsTrend >= 0,
       ));
       
@@ -146,7 +146,7 @@ class __AdminDashboardContentState extends ConsumerState<_AdminDashboardContent>
         title: 'Réservations',
         value: pendingReservations.toString(),
         icon: Icons.event_note,
-        trend: '${reservationsTrend}%',
+        trend: '$reservationsTrend%',
         trendUp: reservationsTrend >= 0,
       ));
       
@@ -154,7 +154,7 @@ class __AdminDashboardContentState extends ConsumerState<_AdminDashboardContent>
         title: 'En retard',
         value: lateBorrowings.toString(),
         icon: Icons.warning,
-        trend: '${lateTrend}%',
+        trend: '$lateTrend%',
         trendUp: false,
       ));
       
@@ -167,8 +167,6 @@ class __AdminDashboardContentState extends ConsumerState<_AdminDashboardContent>
 
   List<RecentActivity> _safeTransformRecentActivities(List<dynamic> data) {
     try {
-      if (data is! List) return [];
-      
       List<RecentActivity> activities = [];
       
       for (var item in data) {
@@ -197,8 +195,6 @@ class __AdminDashboardContentState extends ConsumerState<_AdminDashboardContent>
 
   List<TopBook> _safeTransformTopBooks(List<dynamic> data) {
     try {
-      if (data is! List) return [];
-      
       List<TopBook> books = [];
       
       for (var item in data) {
@@ -228,8 +224,6 @@ class __AdminDashboardContentState extends ConsumerState<_AdminDashboardContent>
 
   List<CategoryStat> _safeTransformCategoryStats(List<dynamic> data) {
     try {
-      if (data is! List) return [];
-      
       List<CategoryStat> categories = [];
       
       for (var item in data) {
@@ -444,8 +438,8 @@ class __AdminDashboardContentState extends ConsumerState<_AdminDashboardContent>
       floatingActionButton: FloatingActionButton(
         onPressed: _loadData,
         backgroundColor: const Color(0xFF2C50A4),
-        child: const Icon(Icons.refresh, color: Colors.white),
         tooltip: 'Rafraîchir les données',
+        child: const Icon(Icons.refresh, color: Colors.white),
       ),
       bottomNavigationBar: _buildBottomNav(),
     );

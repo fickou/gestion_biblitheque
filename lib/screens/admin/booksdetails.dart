@@ -7,7 +7,7 @@ import '/services/api_service.dart';
 class BookDetailPage extends StatefulWidget {
   final String id;
   
-  const BookDetailPage({Key? key, required this.id}) : super(key: key);
+  const BookDetailPage({super.key, required this.id});
   
   @override
   State<BookDetailPage> createState() => _BookDetailPageState();
