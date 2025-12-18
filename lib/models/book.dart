@@ -66,13 +66,6 @@ factory Book.fromJson(Map<String, dynamic> json) {
   final String? status = json['status']?.toString();
   final String? reserveDate = json['reserveDate']?.toString();
   
-  // LOG DE DÉBOGAGE IMPORTANT
-  print('📘 Book.fromJson: "$title"');
-  print('   - available (raw): ${json['available']} (type: ${json['available']?.runtimeType})');
-  print('   - available (bool): $available');
-  print('   - copies: $copies');
-  print('   - Calcul disponible: ${available ? copies : 0}/$copies');
-  
   // Gestion de la catégorie (inchangé)
   Category? category;
   try {
