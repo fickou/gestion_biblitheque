@@ -326,11 +326,6 @@ class __AdminDashboardContentState extends ConsumerState<_AdminDashboardContent>
     
     // Vérifier si l'utilisateur est connecté
     if (!isAuthenticated) {
-      // Rediriger vers la page de connexion si non authentifié
-      Future.delayed(Duration.zero, () {
-        context.go('/login');
-      });
-      
       return const Scaffold(
         body: Center(
           child: CircularProgressIndicator(),
@@ -351,18 +346,19 @@ class __AdminDashboardContentState extends ConsumerState<_AdminDashboardContent>
         // Vérifier si l'utilisateur est admin
         final isAdmin = completeUser.isAdmin;
         if (!isAdmin) {
-          Future.delayed(Duration.zero, () {
-            context.go('/dashboard');
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Accès réservé aux administrateurs'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          });
           return const Scaffold(
             body: Center(
-              child: CircularProgressIndicator(),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.lock, size: 60, color: Colors.grey),
+                  SizedBox(height: 16),
+                  Text(
+                    'Accès réservé aux administrateurs',
+                    style: TextStyle(fontSize: 18, color: Colors.grey),
+                  ),
+                ],
+              ),
             ),
           );
         }
@@ -432,8 +428,6 @@ class __AdminDashboardContentState extends ConsumerState<_AdminDashboardContent>
                               const SizedBox(height: 24),
                               _buildTwoColumnSection(),
                               const SizedBox(height: 24),
-                              _buildChartSection(),
-                              const SizedBox(height: 80),
                             ],
                           ),
                         ),
@@ -936,113 +930,6 @@ class __AdminDashboardContentState extends ConsumerState<_AdminDashboardContent>
                 }).toList(),
               ),
             ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildChartSection() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: const Color(0xFFE2E8F0).withOpacity(0.4),
-          width: 1,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Statistiques par Catégorie',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Color(0xFF0F172A)),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.refresh, size: 18),
-                  color: const Color(0xFF64748B),
-                  onPressed: _loadData,
-                ),
-              ],
-            ),
-          ),
-          Container(
-            height: 200,
-            margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF8FAFC),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: categoryStats.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.auto_graph,
-                          size: 48,
-                          color: const Color(0xFFCBD5E1),
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Aucune statistique par catégorie',
-                          style: TextStyle(fontSize: 14, color: Color(0xFF64748B)),
-                        ),
-                      ],
-                    ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: categoryStats.length,
-                    itemBuilder: (context, index) {
-                      final stat = categoryStats[index];
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                stat.categoryName,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                  color: Color(0xFF0F172A),
-                                ),
-                              ),
-                            ),
-                            Text(
-                              '${stat.totalBooks} livres',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: Color(0xFF64748B),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: stat.availableBooks > 0 ? const Color(0xFF10B981) : const Color(0xFFEF4444),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                '${stat.availableBooks} dispo.',
-                                style: const TextStyle(
-                                  fontSize: 10,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-          ),
         ],
       ),
     );

@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '/providers/auth_provider.dart';
 
+
 class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key});
   

@@ -57,24 +57,8 @@ class _LoginState extends ConsumerState<Login> {
           ),
         );
 
-        // Récupérer le rôle depuis le résultat
-        final userData = result['userData'] as Map<String, dynamic>;
-        final role = userData['role'] as String? ?? 'Étudiant';
-        
-        // Déterminer la route de redirection
-        String redirectPath;
-        if (role == 'Administrateur' || role == 'Bibliothécaire') {
-          redirectPath = '/admin/dashboard';
-        } else {
-          redirectPath = '/dashboard';
-        }
-
-        // Attendre un peu avant la redirection
-        await Future.delayed(const Duration(milliseconds: 500));
-        
-        if (mounted) {
-          context.go(redirectPath);
-        }
+        // La redirection est gérée automatiquement par le routeur (GoRouter)
+        // en écoutant les changements d'état d'authentification.
       } else {
         // Afficher l'erreur retournée par Firebase
         final errorMessage = result['error'] ?? 'Identifiants incorrects';

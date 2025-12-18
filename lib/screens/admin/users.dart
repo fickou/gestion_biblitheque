@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '/providers/auth_provider.dart';
-import '/widgets/notif.dart';
 import '/services/api_service.dart';
 import '/models/user.dart';
 
@@ -43,9 +42,7 @@ class _StudentsPageContentState extends ConsumerState<_StudentsPageContent> {
     });
 
     try {
-      print('📡 Chargement des utilisateurs...');
       final users = await _apiService.getUsers();
-      print('✅ ${users.length} utilisateurs récupérés');
       
       // Compter les emprunts par utilisateur
       for (final user in users) {
@@ -53,7 +50,6 @@ class _StudentsPageContentState extends ConsumerState<_StudentsPageContent> {
           final emprunts = await _apiService.getUserEmprunts(user.id);
           userEmpruntsCount[user.id] = emprunts.length;
         } catch (e) {
-          print('⚠️ Erreur chargement emprunts pour ${user.name}: $e');
           userEmpruntsCount[user.id] = 0;
         }
       }
@@ -63,7 +59,6 @@ class _StudentsPageContentState extends ConsumerState<_StudentsPageContent> {
         _isLoading = false;
       });
     } catch (e) {
-      print('❌ Erreur chargement utilisateurs: $e');
       setState(() {
         _error = 'Erreur lors du chargement des utilisateurs: ${e.toString()}';
         _isLoading = false;
@@ -89,7 +84,6 @@ class _StudentsPageContentState extends ConsumerState<_StudentsPageContent> {
     
     // Vérifier si l'utilisateur est connecté
     if (!isAuthenticated) {
-      // Rediriger vers la page de connexion si non authentifié
       Future.delayed(Duration.zero, () {
         context.go('/login');
       });

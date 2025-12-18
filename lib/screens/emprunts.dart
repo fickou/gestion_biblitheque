@@ -34,7 +34,8 @@ class _EmpruntsPageState extends State<EmpruntsPage> {
 
     try {
       // Vérifier l'authentification d'abord
-      if (!_apiService.isAuthenticated) {
+      final firebaseUser = _apiService.currentUser;
+      if (firebaseUser == null) {
         setState(() {
           _errorMessage = 'Veuillez vous connecter';
           _isLoading = false;
@@ -42,9 +43,13 @@ class _EmpruntsPageState extends State<EmpruntsPage> {
         return;
       }
 
-      _currentUser = _apiService.currentUser;
+      // Récupérer les détails complets de l'utilisateur (avec rôle)
+      // car _apiService.currentUser retourne désormais un User Firebase
+      final userModel = await _apiService.getUserById(firebaseUser.uid);
       
-      if (_currentUser?.id != null && _currentUser!.id.isNotEmpty) {
+      if (userModel != null) {
+        _currentUser = userModel;
+        
         // Charger les emprunts de l'utilisateur
         final userEmprunts = await _apiService.getUserEmprunts(_currentUser!.id);
         
@@ -58,18 +63,13 @@ class _EmpruntsPageState extends State<EmpruntsPage> {
           _isLoading = false;
         });
       } else {
-        // Si c'est un admin, charger tous les emprunts
-        if (_currentUser?.role.name.toLowerCase() == 'admin' || 
-            _currentUser?.role.name.toLowerCase() == 'administrateur') {
-          await _loadAllEmprunts();
-        } else {
-          setState(() {
-            _errorMessage = 'Informations utilisateur incomplètes';
-            _isLoading = false;
-          });
-        }
+        setState(() {
+          _errorMessage = 'Impossible de récupérer le profil utilisateur';
+          _isLoading = false;
+        });
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _errorMessage = 'Erreur lors du chargement: ${e.toString()}';
         _isLoading = false;
