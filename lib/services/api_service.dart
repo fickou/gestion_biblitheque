@@ -686,5 +686,103 @@ class ApiService {
   }
 
   bool get isAuthenticated => FirebaseAuth.instance.currentUser != null;
+    // Ajouter ces deux méthodes dans votre ApiService
+
+  Future<Map<String, dynamic>> addBook(Map<String, dynamic> bookData) async {
+    try {
+      print('📚 Tentative d\'ajout d\'un livre: $bookData');
+      
+      final response = await http.post(
+        ApiConfig.getBooksUri(),
+        headers: _getHeaders(),
+        body: jsonEncode(bookData),
+      );
+
+      print('📥 Réponse ajout livre - Status: ${response.statusCode}');
+      print('📥 Réponse ajout livre - Body: ${response.body}');
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        try {
+          final data = jsonDecode(response.body);
+          return {
+            'success': true,
+            'message': data['message'] ?? 'Livre ajouté avec succès',
+            'data': data,
+          };
+        } catch (e) {
+          return {
+            'success': true,
+            'message': 'Livre ajouté avec succès',
+          };
+        }
+      } else {
+        final errorData = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': errorData['message'] ?? 'Erreur lors de l\'ajout du livre (${response.statusCode})',
+          'statusCode': response.statusCode,
+        };
+      }
+    } catch (e) {
+      print('❌ Erreur addBook: $e');
+      return {
+        'success': false,
+        'message': 'Erreur de connexion: $e',
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>> updateBooks(String id, Map<String, dynamic> bookData) async {
+    try {
+      print('📝 Tentative de mise à jour du livre ID: $id');
+      print('📝 Données: $bookData');
+      
+      final response = await http.put(
+        ApiConfig.getBookUri(id),
+        headers: _getHeaders(),
+        body: jsonEncode(bookData),
+      );
+
+      print('📥 Réponse mise à jour livre - Status: ${response.statusCode}');
+      print('📥 Réponse mise à jour livre - Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        try {
+          final data = jsonDecode(response.body);
+          return {
+            'success': true,
+            'message': data['message'] ?? 'Livre modifié avec succès',
+            'data': data,
+          };
+        } catch (e) {
+          return {
+            'success': true,
+            'message': 'Livre modifié avec succès',
+          };
+        }
+      } else {
+        try {
+          final errorData = jsonDecode(response.body);
+          return {
+            'success': false,
+            'message': errorData['message'] ?? 'Erreur lors de la modification du livre (${response.statusCode})',
+            'statusCode': response.statusCode,
+          };
+        } catch (e) {
+          return {
+            'success': false,
+            'message': 'Erreur serveur (${response.statusCode})',
+            'statusCode': response.statusCode,
+          };
+        }
+      }
+    } catch (e) {
+      print('❌ Erreur updateBook: $e');
+      return {
+        'success': false,
+        'message': 'Erreur de connexion: $e',
+      };
+    }
+  }
   
 }

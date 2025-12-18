@@ -36,83 +36,103 @@ class Book {
     this.reserveDate,
   });
 
-  factory Book.fromJson(Map<String, dynamic> json) {
-    // Extraction sécurisée
-    final String id = (json['id'] ?? '').toString();
-    final String title = (json['title'] ?? '').toString();
-    final String author = (json['author'] ?? '').toString();
-    final bool available = json['available'] == true || json['available'] == 1;
-    final String year = (json['year'] ?? '').toString();
-    final String? description = json['description']?.toString();
-    final int copies = (json['copies'] is int) 
-        ? json['copies'] 
-        : int.tryParse(json['copies']?.toString() ?? '0') ?? 0;
-    final String? isbn = json['isbn']?.toString();
-    final String? borrowDate = json['borrowDate']?.toString();
-    final String? returnDate = json['returnDate']?.toString();
-    final String? status = json['status']?.toString();
-    final String? reserveDate = json['reserveDate']?.toString();
-    
-    // Gestion de la catégorie
-    Category? category;
-    try {
-      if (json['category'] != null) {
-        if (json['category'] is Map<String, dynamic>) {
-          category = Category.fromJson(json['category'] as Map<String, dynamic>);
-        } else if (json['category'] is Map) {
-          category = Category.fromJson(Map<String, dynamic>.from(json['category']));
-        }
-      } else if (json['categoryName'] != null) {
-        category = Category(
-          id: (json['categoryId'] ?? '').toString(),
-          name: (json['categoryName'] ?? '').toString(),
-          description: (json['categoryDescription'] ?? '').toString(),
-        );
-      }
-    } catch (e) {
-      print('Erreur création catégorie dans Book: $e');
-    }
-    
-    // Gestion des dates
-    DateTime? createdAt;
-    DateTime? updatedAt;
-    
-    try {
-      if (json['createdAt'] != null) {
-        final dateStr = json['createdAt'].toString();
-        if (dateStr.isNotEmpty) {
-          createdAt = DateTime.tryParse(dateStr);
-        }
-      }
-      
-      if (json['updatedAt'] != null) {
-        final dateStr = json['updatedAt'].toString();
-        if (dateStr.isNotEmpty) {
-          updatedAt = DateTime.tryParse(dateStr);
-        }
-      }
-    } catch (e) {
-      print('Erreur parsing dates dans Book: $e');
-    }
-
-    return Book(
-      id: id,
-      title: title,
-      author: author,
-      available: available,
-      category: category,
-      year: year,
-      description: description,
-      copies: copies,
-      isbn: isbn,
-      createdAt: createdAt,
-      updatedAt: updatedAt,
-      borrowDate: borrowDate,
-      returnDate: returnDate,
-      status: status,
-      reserveDate: reserveDate,
-    );
+factory Book.fromJson(Map<String, dynamic> json) {
+  // Extraction sécurisée
+  final String id = (json['id'] ?? '').toString();
+  final String title = (json['title'] ?? '').toString();
+  final String author = (json['author'] ?? '').toString();
+  final String year = (json['year'] ?? '').toString();
+  final String? description = json['description']?.toString();
+  
+  // CORRECTION CRITIQUE: Gestion de 'available'
+  final bool available;
+  if (json['available'] is bool) {
+    available = json['available'] as bool;
+  } else if (json['available'] is int) {
+    available = json['available'] == 1;
+  } else if (json['available'] is String) {
+    available = json['available'] == '1' || json['available'].toLowerCase() == 'true';
+  } else {
+    // Par défaut, considérer comme disponible
+    available = true;
   }
+  
+  final int copies = (json['copies'] is int) 
+      ? json['copies'] 
+      : int.tryParse(json['copies']?.toString() ?? '0') ?? 0;
+  final String? isbn = json['isbn']?.toString();
+  final String? borrowDate = json['borrowDate']?.toString();
+  final String? returnDate = json['returnDate']?.toString();
+  final String? status = json['status']?.toString();
+  final String? reserveDate = json['reserveDate']?.toString();
+  
+  // LOG DE DÉBOGAGE IMPORTANT
+  print('📘 Book.fromJson: "$title"');
+  print('   - available (raw): ${json['available']} (type: ${json['available']?.runtimeType})');
+  print('   - available (bool): $available');
+  print('   - copies: $copies');
+  print('   - Calcul disponible: ${available ? copies : 0}/$copies');
+  
+  // Gestion de la catégorie (inchangé)
+  Category? category;
+  try {
+    if (json['category'] != null) {
+      if (json['category'] is Map<String, dynamic>) {
+        category = Category.fromJson(json['category'] as Map<String, dynamic>);
+      } else if (json['category'] is Map) {
+        category = Category.fromJson(Map<String, dynamic>.from(json['category']));
+      }
+    } else if (json['categoryName'] != null) {
+      category = Category(
+        id: (json['categoryId'] ?? '').toString(),
+        name: (json['categoryName'] ?? '').toString(),
+        description: (json['categoryDescription'] ?? '').toString(),
+      );
+    }
+  } catch (e) {
+    print('Erreur création catégorie dans Book: $e');
+  }
+  
+  // Gestion des dates (inchangé)
+  DateTime? createdAt;
+  DateTime? updatedAt;
+  
+  try {
+    if (json['createdAt'] != null) {
+      final dateStr = json['createdAt'].toString();
+      if (dateStr.isNotEmpty) {
+        createdAt = DateTime.tryParse(dateStr);
+      }
+    }
+    
+    if (json['updatedAt'] != null) {
+      final dateStr = json['updatedAt'].toString();
+      if (dateStr.isNotEmpty) {
+        updatedAt = DateTime.tryParse(dateStr);
+      }
+    }
+  } catch (e) {
+    print('Erreur parsing dates dans Book: $e');
+  }
+
+  return Book(
+    id: id,
+    title: title,
+    author: author,
+    available: available, // CORRIGÉ
+    category: category,
+    year: year,
+    description: description,
+    copies: copies,
+    isbn: isbn,
+    createdAt: createdAt,
+    updatedAt: updatedAt,
+    borrowDate: borrowDate,
+    returnDate: returnDate,
+    status: status,
+    reserveDate: reserveDate,
+  );
+}
 
   Map<String, dynamic> toJson() {
     return {
@@ -151,7 +171,7 @@ class Book {
   }
 
   // Getters utiles
-  int get availableCopies => copies;
+  int get availableCopies => available ? copies : 0;
   bool get canBeBorrowed => available && copies > 0;
   bool get canBeReserved => !available || copies == 0;
   bool get isValid => id.isNotEmpty && title.isNotEmpty && author.isNotEmpty;
