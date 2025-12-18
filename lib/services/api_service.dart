@@ -1,9 +1,9 @@
-// lib/services/api_service.dart - VERSION SANS TOKENS
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:firebase_auth/firebase_auth.dart';
 import 'api_config.dart';
 
-import '../models/user.dart';
+import '../models/user.dart' as model; // Alias pour éviter conflit avec Firebase User
 import '../models/book.dart';
 import '../models/emprunt.dart';
 import '../models/reservation.dart';
@@ -14,12 +14,17 @@ class ApiService {
   static final ApiService _instance = ApiService._internal();
   factory ApiService() => _instance;
   ApiService._internal();
+  
+  User? get currentUser => FirebaseAuth.instance.currentUser;
 
-  User? _currentUser;
+  // Méthode de sécurité pour bloquer les appels si déconnecté
+  void _requireAuth() {
+    if (currentUser == null) {
+      throw Exception("Action non autorisée : Utilisateur déconnecté");
+    }
+  }
 
-  User? get currentUser => _currentUser;
-
-  // Méthode d'authentification simplifiée sans token
+  @Deprecated('Use AuthService.signIn instead')
   Future<Map<String, dynamic>> login(String email, String password) async {
     try {
       print('🔐 Tentative de connexion vers: ${ApiConfig.getLoginUri()}');
@@ -38,49 +43,38 @@ class ApiService {
         }),
       );
 
-      print('📊 Statut HTTP: ${response.statusCode}');
-      print('📄 Réponse brute: ${response.body}');
-
       if (response.statusCode == 200) {
         try {
           final data = jsonDecode(response.body);
           
-          // Vérifier si la réponse contient 'success'
           final bool success = data['success'] == true;
           
           if (success) {
-            // Récupérer l'utilisateur de manière sécurisée
             if (data['user'] != null) {
               try {
-                _currentUser = User.fromJson(Map<String, dynamic>.from(data['user']));
-                print('✅ Utilisateur créé: ${_currentUser!.name}');
+                var user = model.User.fromJson(Map<String, dynamic>.from(data['user']));
                 
                 return {
                   'success': true,
-                  'user': _currentUser,
+                  'user': user,
                   'message': data['message']?.toString() ?? 'Connexion réussie'
                 };
               } catch (e) {
-                print('❌ Erreur lors de la création de l\'utilisateur: $e');
                 return {
                   'success': false,
                   'message': 'Format utilisateur invalide'
                 };
               }
             } else {
-              print('⚠️ Avertissement: Pas de données utilisateur dans la réponse');
               return {
                 'success': false,
                 'message': 'Pas de données utilisateur dans la réponse'
               };
             }
           } else {
-            // Récupérer le message d'erreur
             final errorMessage = data['message']?.toString() 
                 ?? data['error']?.toString()
                 ?? 'Identifiants incorrects';
-            
-            print('❌ Login échoué: $errorMessage');
             
             return {
               'success': false,
@@ -88,26 +82,22 @@ class ApiService {
             };
           }
         } catch (e) {
-          print('❌ Erreur de parsing JSON: $e');
           return {
             'success': false,
             'message': 'Format de réponse invalide'
           };
         }
       } else if (response.statusCode == 401) {
-        print('❌ 401: Non autorisé');
         return {
           'success': false,
           'message': 'Email ou mot de passe incorrect'
         };
       } else if (response.statusCode == 422) {
-        print('❌ 422: Erreur de validation');
         return {
           'success': false,
           'message': 'Données de connexion invalides'
         };
       } else {
-        print('❌ Erreur HTTP: ${response.statusCode}');
         return {
           'success': false,
           'message': 'Erreur serveur (${response.statusCode})',
@@ -115,7 +105,6 @@ class ApiService {
         };
       }
     } catch (e) {
-      print('❌ Erreur de connexion complète: $e');
       String errorMsg = 'Erreur de connexion';
       
       if (e.toString().contains('Timeout')) {
@@ -132,24 +121,17 @@ class ApiService {
   }
 
   Future<void> logout() async {
-    _currentUser = null;
-    print('✅ Déconnexion');
   }
 
   // Méthodes pour les livres
   Future<List<Book>> getBooks() async {
-    print('📚 getBooks - Début');
-    
     try {
       final uri = ApiConfig.getBooksUri();
-      print('🌐 URI: $uri');
       
       final response = await http.get(
         uri,
         headers: _getHeaders(),
       ).timeout(const Duration(seconds: 10));
-      
-      print('📊 Status: ${response.statusCode}');
       
       if (response.statusCode == 200) {
         try {
@@ -162,12 +144,9 @@ class ApiService {
                 try {
                   return Book.fromJson(Map<String, dynamic>.from(json));
                 } catch (e) {
-                  print('⚠️ Erreur conversion livre: $e');
                   return null;
                 }
               }).whereType<Book>().toList();
-              
-              print('✅ ${books.length} livres récupérés');
               return books;
             }
           } else if (data is List) {
@@ -175,26 +154,20 @@ class ApiService {
               try {
                 return Book.fromJson(Map<String, dynamic>.from(json));
               } catch (e) {
-                print('⚠️ Erreur conversion livre: $e');
                 return null;
               }
             }).whereType<Book>().toList();
-            
-            print('✅ ${books.length} livres récupérés (ancien format)');
             return books;
           }
           
           return [];
         } catch (e) {
-          print('❌ Erreur parsing JSON: $e');
           return [];
         }
       } else {
-        print('❌ Erreur HTTP: ${response.statusCode}');
         return [];
       }
     } catch (e) {
-      print('❌ Exception getBooks: $e');
       return [];
     }
   }
@@ -211,13 +184,11 @@ class ApiService {
           final data = jsonDecode(response.body);
           return Book.fromJson(Map<String, dynamic>.from(data));
         } catch (e) {
-          print('Erreur de parsing getBookById: $e');
           return null;
         }
       }
       return null;
     } catch (e) {
-      print('Erreur lors de la récupération du livre: $e');
       return null;
     }
   }
@@ -233,7 +204,6 @@ class ApiService {
       final data = jsonDecode(response.body);
       return data;
     } catch (e) {
-      print('Erreur création livre: $e');
       return {'success': false, 'message': 'Erreur: $e'};
     }
   }
@@ -249,7 +219,6 @@ class ApiService {
       final data = jsonDecode(response.body);
       return data;
     } catch (e) {
-      print('Erreur mise à jour livre: $e');
       return {'success': false, 'message': 'Erreur: $e'};
     }
   }
@@ -264,7 +233,6 @@ class ApiService {
       final data = jsonDecode(response.body);
       return data;
     } catch (e) {
-      print('Erreur suppression livre: $e');
       return {'success': false, 'message': 'Erreur: $e'};
     }
   }
@@ -284,73 +252,60 @@ class ApiService {
               try {
                 return Book.fromJson(Map<String, dynamic>.from(json));
               } catch (e) {
-                print('Erreur lors de la conversion d\'un livre: $e');
                 return null;
               }
             }).whereType<Book>().toList();
           }
           return [];
         } catch (e) {
-          print('Erreur de parsing searchBooks: $e');
           return [];
         }
       }
       return [];
     } catch (e) {
-      print('Erreur lors de la recherche: $e');
       return [];
     }
   }
 
   // Méthodes pour les utilisateurs
-  Future<List<User>> getUsers() async {
+  Future<List<model.User>> getUsers() async {
     try {
       final uri = ApiConfig.getUsersUri();
-      print('🌐 GET Users URI: $uri');
       
       final headers = _getHeaders();
       
       final response = await http.get(uri, headers: headers);
-      
-      print('📊 Status: ${response.statusCode}');
       
       if (response.statusCode == 200) {
         try {
           final data = jsonDecode(response.body);
           
           if (data is List) {
-            final users = data.map<User?>((json) {
+            final users = data.map<model.User?>((json) {
               try {
-                return User.fromJson(Map<String, dynamic>.from(json));
+                return model.User.fromJson(Map<String, dynamic>.from(json));
               } catch (e) {
-                print('⚠️ Erreur conversion utilisateur: $e');
                 return null;
               }
-            }).whereType<User>().toList();
-            
-            print('✅ ${users.length} utilisateurs récupérés avec succès');
+            }).whereType<model.User>().toList();
             return users;
           }
           
           return [];
         } catch (e) {
-          print('❌ Erreur parsing JSON: $e');
           return [];
         }
       } else if (response.statusCode == 401) {
-        print('❌ Erreur 401: Accès non autorisé');
         throw Exception('Accès non autorisé');
       } else {
-        print('❌ Erreur HTTP: ${response.statusCode}');
         return [];
       }
     } catch (e) {
-      print('❌ Exception getUsers: $e');
       rethrow;
     }
   }
 
-  Future<User?> getUserById(String id) async {
+  Future<model.User?> getUserById(String id) async {
     try {
       final response = await http.get(
         ApiConfig.getUserUri(id),
@@ -360,15 +315,13 @@ class ApiService {
       if (response.statusCode == 200) {
         try {
           final data = jsonDecode(response.body);
-          return User.fromJson(Map<String, dynamic>.from(data));
+          return model.User.fromJson(Map<String, dynamic>.from(data));
         } catch (e) {
-          print('Erreur de parsing getUserById: $e');
           return null;
         }
       }
       return null;
     } catch (e) {
-      print('Erreur lors de la récupération de l\'utilisateur: $e');
       return null;
     }
   }
@@ -389,20 +342,17 @@ class ApiService {
               try {
                 return Emprunt.fromJson(Map<String, dynamic>.from(json));
               } catch (e) {
-                print('Erreur lors de la conversion d\'un emprunt: $e');
                 return null;
               }
             }).whereType<Emprunt>().toList();
           }
           return [];
         } catch (e) {
-          print('Erreur de parsing getEmprunts: $e');
           return [];
         }
       }
       return [];
     } catch (e) {
-      print('Erreur lors de la récupération des emprunts: $e');
       return [];
     }
   }
@@ -432,7 +382,6 @@ class ApiService {
       
       return [];
     } catch (e) {
-      print('Erreur getUserEmprunts: $e');
       return [];
     }
   }
@@ -452,20 +401,17 @@ class ApiService {
               try {
                 return Emprunt.fromJson(Map<String, dynamic>.from(json));
               } catch (e) {
-                print('Erreur lors de la conversion d\'un emprunt: $e');
                 return null;
               }
             }).whereType<Emprunt>().toList();
           }
           return [];
         } catch (e) {
-          print('Erreur de parsing getLateEmprunts: $e');
           return [];
         }
       }
       return [];
     } catch (e) {
-      print('Erreur lors de la récupération des emprunts en retard: $e');
       return [];
     }
   }
@@ -484,7 +430,6 @@ class ApiService {
       final data = jsonDecode(response.body);
       return data;
     } catch (e) {
-      print('Erreur création emprunt: $e');
       return {'success': false, 'message': 'Erreur: $e'};
     }
   }
@@ -502,7 +447,6 @@ class ApiService {
       final data = jsonDecode(response.body);
       return data;
     } catch (e) {
-      print('Erreur retour livre: $e');
       return {'success': false, 'message': 'Erreur: $e'};
     }
   }
@@ -523,20 +467,17 @@ class ApiService {
               try {
                 return Reservation.fromJson(Map<String, dynamic>.from(json));
               } catch (e) {
-                print('Erreur lors de la conversion d\'une réservation: $e');
                 return null;
               }
             }).whereType<Reservation>().toList();
           }
           return [];
         } catch (e) {
-          print('Erreur de parsing getReservations: $e');
           return [];
         }
       }
       return [];
     } catch (e) {
-      print('Erreur lors de la récupération des réservations: $e');
       return [];
     }
   }
@@ -556,20 +497,17 @@ class ApiService {
               try {
                 return Reservation.fromJson(Map<String, dynamic>.from(json));
               } catch (e) {
-                print('Erreur lors de la conversion d\'une réservation: $e');
                 return null;
               }
             }).whereType<Reservation>().toList();
           }
           return [];
         } catch (e) {
-          print('Erreur de parsing getPendingReservations: $e');
           return [];
         }
       }
       return [];
     } catch (e) {
-      print('Erreur lors de la récupération des réservations en attente: $e');
       return [];
     }
   }
@@ -588,7 +526,6 @@ class ApiService {
       final data = jsonDecode(response.body);
       return data;
     } catch (e) {
-      print('Erreur création réservation: $e');
       return {'success': false, 'message': 'Erreur: $e'};
     }
   }
@@ -609,20 +546,17 @@ class ApiService {
               try {
                 return Category.fromJson(Map<String, dynamic>.from(json));
               } catch (e) {
-                print('Erreur lors de la conversion d\'une catégorie: $e');
                 return null;
               }
             }).whereType<Category>().toList();
           }
           return [];
         } catch (e) {
-          print('Erreur de parsing getCategories: $e');
           return [];
         }
       }
       return [];
     } catch (e) {
-      print('Erreur lors de la récupération des catégories: $e');
       return [];
     }
   }
@@ -643,20 +577,17 @@ class ApiService {
               try {
                 return Role.fromJson(Map<String, dynamic>.from(json));
               } catch (e) {
-                print('Erreur lors de la conversion d\'un rôle: $e');
                 return null;
               }
             }).whereType<Role>().toList();
           }
           return [];
         } catch (e) {
-          print('Erreur de parsing getRoles: $e');
           return [];
         }
       }
       return [];
     } catch (e) {
-      print('Erreur lors de la récupération des rôles: $e');
       return [];
     }
   }
@@ -674,13 +605,11 @@ class ApiService {
           final data = jsonDecode(response.body);
           return Map<String, dynamic>.from(data);
         } catch (e) {
-          print('Erreur de parsing getDashboardStats: $e');
           return {};
         }
       }
       return {};
     } catch (e) {
-      print('Erreur lors de la récupération des stats du dashboard: $e');
       return {};
     }
   }
@@ -697,13 +626,11 @@ class ApiService {
           final data = jsonDecode(response.body);
           return List<dynamic>.from(data);
         } catch (e) {
-          print('Erreur de parsing getTopBooks: $e');
           return [];
         }
       }
       return [];
     } catch (e) {
-      print('Erreur lors de la récupération des livres populaires: $e');
       return [];
     }
   }
@@ -720,13 +647,11 @@ class ApiService {
           final data = jsonDecode(response.body);
           return List<dynamic>.from(data);
         } catch (e) {
-          print('Erreur de parsing getRecentActivities: $e');
           return [];
         }
       }
       return [];
     } catch (e) {
-      print('Erreur lors de la récupération des activités récentes: $e');
       return [];
     }
   }
@@ -743,13 +668,11 @@ class ApiService {
           final data = jsonDecode(response.body);
           return List<dynamic>.from(data);
         } catch (e) {
-          print('Erreur de parsing getCategoryStats: $e');
           return [];
         }
       }
       return [];
     } catch (e) {
-      print('Erreur lors de la récupération des stats par catégorie: $e');
       return [];
     }
   }
@@ -762,23 +685,6 @@ class ApiService {
     };
   }
 
-  // Ancienne méthode, maintenant obsolète
-  Map<String, String> _getAuthHeaders() {
-    return _getHeaders(); // Retourne juste les headers basiques
-  }
-
-  bool get isAuthenticated => _currentUser != null;
+  bool get isAuthenticated => FirebaseAuth.instance.currentUser != null;
   
-  // Méthode de débogage
-  void debugInfo() {
-    print('''
-=== API SERVICE DEBUG ===
-Authentifié: $isAuthenticated
-Utilisateur: ${_currentUser != null ? 'Oui (${_currentUser!.name} - ${_currentUser!.email})' : 'Non'}
-URL de base: ${ApiConfig.baseUrl}
-=======================
-''');
-  }
-  
-  int min(int a, int b) => a < b ? a : b;
 }

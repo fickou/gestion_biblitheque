@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:flutter/material.dart';
 import '../screens/admin/notification.dart';
 import '../screens/admin/profil.dart';
 import '../screens/admin/reservation.dart';
@@ -21,23 +23,20 @@ import '../screens/emprunts.dart';
 
 // Router Provider
 final routerProvider = Provider<GoRouter>((ref) {
+  final authService = ref.watch(authServiceProvider);
+  
   return GoRouter(
     initialLocation: '/home',
+    refreshListenable: GoRouterRefreshStream(authService.authStateChanges),
     redirect: (context, state) async {
-      // Récupérer l'état d'authentification
-      final authState = ref.read(authStateProvider);
+      // 1. Récupérer l'état d'authentification actuel
+      final user = authService.currentUser;
+      final isLoggedIn = user != null;
       
-      // Si nous n'avons pas encore de données, attendre
-      if (authState.isLoading) {
-        return null;
-      }
-      
-      final user = authState.value;
       final isAuthPage = state.matchedLocation == '/login' || 
                          state.matchedLocation == '/signup';
       final isHomePage = state.matchedLocation == '/home';
 
-      
       // Routes qui nécessitent une authentification (utilisateurs normaux)
       final userRoutes = [
         '/dashboard',
@@ -62,35 +61,32 @@ final routerProvider = Provider<GoRouter>((ref) {
           state.matchedLocation.startsWith(route));
       final isAdminRoute = adminRoutes.any((route) => 
           state.matchedLocation.startsWith(route));
-      
-      // 1. Si non connecté et accès à une route protégée → login
-      if (user == null && (isUserRoute || isAdminRoute)) {
-        // Sauvegarder la route demandée pour redirection après login
+
+      // 2. Si NON CONNECTÉ et essaie d'accéder à une page protégée -> LOGIN
+      if (!isLoggedIn && (isUserRoute || isAdminRoute)) {
         return '/login?redirect=${Uri.encodeComponent(state.matchedLocation)}';
       }
       
-      // 2. Si déjà connecté et accès à login/signup → redirection
-      if (user != null && isAuthPage) {
-        // Récupérer le rôle de l'utilisateur
-        final userData = await ref.read(authServiceProvider).getCurrentUserMySQLData();
-        final role = userData?['role'] ?? 'Étudiant';
+      // 3. Si CONNECTÉ et essaie d'accéder à Login/Signup/Home -> DASHBOARD
+      if (isLoggedIn && (isAuthPage || isHomePage)) {
+        // En attente : il faudrait idéalement vérifier le rôle ici.
+        // Mais nous sommes dans une fonction synchrone (conceptuellement) du routeur.
+        // On redirige vers une page "loading" ou par défaut le dashboard étudiant,
+        // et le dashboard lui-même redirigera si besoin, OU on fait un appel async rapide.
         
-        // Rediriger vers le dashboard approprié
-        if (role == 'Administrateur' || role == 'Bibliothécaire') {
-          return '/admin/dashboard';
-        } else {
-          return '/dashboard';
-        }
-      }
-      
-      // 4. Si connecté et sur la page d'accueil, rediriger vers le dashboard approprié
-      if (user != null && isHomePage) {
-        final userData = await ref.read(authServiceProvider).getCurrentUserMySQLData();
-        final role = userData?['role'] ?? 'Étudiant';
-        
-        if (role == 'Administrateur' || role == 'Bibliothécaire') {
-          return '/admin/dashboard';
-        } else {
+        // Note: L'appel async dans redirect est supporté.
+        try {
+          final userData = await authService.getCurrentUserMySQLData();
+          final role = userData?['role'];
+          final roleName = (role is Map) ? role['name'] : role;
+          
+          if (roleName == 'Administrateur' || roleName == 'Bibliothécaire') {
+            return '/admin/dashboard';
+          } else {
+            return '/dashboard';
+          }
+        } catch (e) {
+          // Fallback en cas d'erreur
           return '/dashboard';
         }
       }
@@ -196,5 +192,26 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const AdminReservationsPage(),
       ),
     ],
+    errorBuilder: (context, state) => Scaffold(
+      body: Center(child: Text('Erreur: ${state.error}')),
+    ),
   );
 });
+
+// Classe utilitaire pour écouter le stream Firebase Auth
+class GoRouterRefreshStream extends ChangeNotifier {
+  GoRouterRefreshStream(Stream<dynamic> stream) {
+    notifyListeners();
+    _subscription = stream.asBroadcastStream().listen(
+      (dynamic _) => notifyListeners(),
+    );
+  }
+
+  late final StreamSubscription<dynamic> _subscription;
+
+  @override
+  void dispose() {
+    _subscription.cancel();
+    super.dispose();
+  }
+}

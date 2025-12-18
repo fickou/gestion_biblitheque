@@ -4,7 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '/services/auth_service.dart';
 
-// ✅ Provider du service d'authentification
+// ✅ Provider du service d'authentification (Stable)
 final authServiceProvider = Provider<AuthService>((ref) {
   return AuthService();
 });
@@ -14,280 +14,145 @@ final authStateProvider = StreamProvider<User?>((ref) {
   return ref.watch(authServiceProvider).authStateChanges;
 });
 
-// ✅ Provider de l'utilisateur actuel Firebase
+// ✅ Provider de l'utilisateur actuel Firebase (REACTIF)
 final currentUserProvider = Provider<User?>((ref) {
-  return ref.watch(authServiceProvider).currentUser;
+  return ref.watch(authStateProvider).value;
 });
 
-// ✅ Provider de l'UID Firebase (utile pour les appels API)
+// ✅ Provider de l'UID Firebase
 final firebaseUidProvider = Provider<String?>((ref) {
-  final user = ref.watch(currentUserProvider);
-  return user?.uid;
+  return ref.watch(currentUserProvider)?.uid;
 });
 
 // ✅ Provider pour vérifier si l'utilisateur est connecté
 final isLoggedInProvider = Provider<bool>((ref) {
+  return ref.watch(currentUserProvider) != null;
+});
+
+// ✅ Provider pour les données utilisateur depuis MySQL
+final mysqlUserDataProvider = FutureProvider.autoDispose<Map<String, dynamic>?>((ref) async {
   final user = ref.watch(currentUserProvider);
-  return user != null;
-});
-
-// ✅ Provider pour les données utilisateur depuis MySQL (REMPLACE l'ancien userDataProvider)
-final mysqlUserDataProvider = FutureProvider<Map<String, dynamic>?>((ref) async {
+  if (user == null) return null;
+  
   try {
-    final authService = ref.watch(authServiceProvider);
-    final user = authService.currentUser;
-    
-    if (user == null) return null;
-    
-    final userData = await authService.getCurrentUserMySQLData();
-    
-    if (userData != null) {
-      print('✅ Données MySQL chargées pour ${userData['name']}');
-    } else {
-      print('⚠️ Aucune donnée MySQL trouvée pour ${user.uid}');
-    }
-    
-    return userData;
+    final authService = ref.read(authServiceProvider);
+    return await authService.getCurrentUserMySQLData();
   } catch (e) {
-    print('❌ Erreur mysqlUserDataProvider: $e');
     return null;
   }
 });
 
-// ✅ Provider du rôle utilisateur depuis MySQL (REMPLACE l'ancien userRoleProvider)
-final userRoleProvider = FutureProvider<String>((ref) async {
-  try {
-    final userDataAsync = ref.watch(mysqlUserDataProvider);
-    
-    return userDataAsync.when(
-      data: (userData) {
-        if (userData == null) return 'guest';
-        
-        // Récupérer le rôle (peut être un Map ou une String)
-        final role = userData['role'];
-        
-        if (role is Map<String, dynamic>) {
-          return role['name'] ?? 'Étudiant';
-        } else if (role is String) {
-          return role;
-        }
-        
-        return 'Étudiant';
-      },
-      loading: () => 'Chargement...',
-      error: (error, stack) {
-        print('❌ Erreur userRoleProvider: $error');
-        return 'guest';
-      },
-    );
-  } catch (e) {
-    return 'guest';
-  }
+// ✅ Provider du rôle utilisateur
+final userRoleProvider = FutureProvider.autoDispose<String>((ref) async {
+  final userData = await ref.watch(mysqlUserDataProvider.future);
+  if (userData == null) return 'guest';
+  final role = userData['role'];
+  if (role is Map) return role['name']?.toString() ?? 'Étudiant';
+  return role?.toString() ?? 'Étudiant';
 });
 
-// ✅ Provider pour vérifier si l'utilisateur est admin
-final isAdminProvider = FutureProvider<bool>((ref) async {
-  try {
-    final role = await ref.watch(userRoleProvider.future);
-    
-    final lowerRole = role.toLowerCase();
-    return lowerRole == 'administrateur' || lowerRole == 'bibliothécaire';
-  } catch (e) {
-    print('❌ Erreur isAdminProvider: $e');
-    return false;
-  }
+// ✅ Provider Admin
+final isAdminProvider = FutureProvider.autoDispose<bool>((ref) async {
+  final role = await ref.watch(userRoleProvider.future);
+  return ['administrateur', 'bibliothécaire'].contains(role.toLowerCase());
 });
 
-// ✅ Provider pour vérifier si l'utilisateur est professeur
-final isProfessorProvider = FutureProvider<bool>((ref) async {
-  try {
-    final role = await ref.watch(userRoleProvider.future);
-    
-    final lowerRole = role.toLowerCase();
-    return lowerRole == 'professeur' || lowerRole == 'enseignant';
-  } catch (e) {
-    return false;
-  }
+// ✅ Provider Professeur
+final isProfessorProvider = FutureProvider.autoDispose<bool>((ref) async {
+  final role = await ref.watch(userRoleProvider.future);
+  return ['professeur', 'enseignant'].contains(role.toLowerCase());
 });
 
-// ✅ Provider pour l'objet utilisateur complet (fusion Firebase + MySQL)
-final completeUserProvider = FutureProvider<CompleteUser?>((ref) async {
-  try {
-    final firebaseUser = ref.watch(currentUserProvider);
-    final mysqlUserData = await ref.watch(mysqlUserDataProvider.future);
-    
-    if (firebaseUser == null || mysqlUserData == null) return null;
-    
-    return CompleteUser(
-      firebaseUser: firebaseUser,
-      mysqlData: mysqlUserData,
-    );
-  } catch (e) {
-    print('❌ Erreur completeUserProvider: $e');
-    return null;
-  }
+// ✅ Provider "User Complet"
+final completeUserProvider = FutureProvider.autoDispose<CompleteUser?>((ref) async {
+  final firebaseUser = ref.watch(currentUserProvider);
+  final mysqlData = await ref.watch(mysqlUserDataProvider.future);
+  
+  if (firebaseUser == null || mysqlData == null) return null;
+  
+  return CompleteUser(
+    firebaseUser: firebaseUser,
+    mysqlData: mysqlData,
+  );
 });
 
 // ✅ Provider pour le nom d'affichage
-final displayNameProvider = Provider<String>((ref) {
+final displayNameProvider = Provider.autoDispose<String>((ref) {
   final userAsync = ref.watch(completeUserProvider);
-  
   return userAsync.when(
-    data: (completeUser) {
-      if (completeUser == null) return 'Invité';
-      
-      // Priorité: MySQL name, sinon Firebase displayName, sinon email
-      final mysqlName = completeUser.mysqlData['name'];
-      if (mysqlName != null && mysqlName.toString().isNotEmpty) {
-        return mysqlName.toString();
-      }
-      
-      final firebaseName = completeUser.firebaseUser.displayName;
-      if (firebaseName != null && firebaseName.isNotEmpty) {
-        return firebaseName;
-      }
-      
-      return completeUser.firebaseUser.email?.split('@')[0] ?? 'Utilisateur';
-    },
+    data: (user) => user?.displayName ?? 'Invité',
     loading: () => 'Chargement...',
-    error: (error, stack) => 'Utilisateur',
+    error: (_, __) => 'Erreur',
   );
 });
 
 // ✅ Provider pour l'email
-final userEmailProvider = Provider<String?>((ref) {
-  final user = ref.watch(currentUserProvider);
-  return user?.email;
+final userEmailProvider = Provider.autoDispose<String?>((ref) {
+  return ref.watch(currentUserProvider)?.email;
 });
 
-// ✅ Provider pour l'avatar (texte ou URL)
-final userAvatarProvider = Provider<String>((ref) {
+// ✅ Provider pour l'avatar
+final userAvatarProvider = Provider.autoDispose<String>((ref) {
   final userAsync = ref.watch(completeUserProvider);
-  
   return userAsync.when(
-    data: (completeUser) {
-      if (completeUser == null) return 'U';
-      
-      // Priorité: MySQL avatarText
-      final mysqlAvatar = completeUser.mysqlData['avatarText'];
-      if (mysqlAvatar != null && mysqlAvatar.toString().isNotEmpty) {
-        return mysqlAvatar.toString();
-      }
-      
-      // Sinon générer à partir du nom
-      final name = completeUser.displayName;
-      if (name.length >= 2) {
-        return name.substring(0, 2).toUpperCase();
-      }
-      
+    data: (user) {
+      if (user == null) return 'U';
+      // Logique existante simplifiée via CompleteUser
+      final name = user.displayName;
+      if (name.length >= 2) return name.substring(0, 2).toUpperCase();
       return name.substring(0, 1).toUpperCase();
     },
     loading: () => 'U',
-    error: (error, stack) => 'U',
+    error: (_, __) => 'U',
   );
 });
 
-// ✅ Provider pour les permissions utilisateur
-final userPermissionsProvider = FutureProvider<Map<String, dynamic>>((ref) async {
-  try {
-    final userData = await ref.watch(mysqlUserDataProvider.future);
-    
-    if (userData != null && userData['role'] is Map) {
-      final role = userData['role'] as Map<String, dynamic>;
-      return role['permissions'] ?? {};
-    }
-    
-    return {}; // Permissions vides par défaut
-  } catch (e) {
-    return {};
+// ✅ Provider pour les permissions
+final userPermissionsProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
+  final userData = await ref.watch(mysqlUserDataProvider.future);
+  if (userData != null && userData['role'] is Map) {
+    return (userData['role'] as Map<String, dynamic>)['permissions'] ?? {};
   }
+  return {};
 });
 
-// ✅ Provider pour vérifier une permission spécifique
-final hasPermissionProvider = FutureProvider.family<bool, String>((ref, permission) async {
-  try {
-    final permissions = await ref.watch(userPermissionsProvider.future);
-    return permissions[permission] == true;
-  } catch (e) {
-    return false;
-  }
+// ✅ Provider permission spécifique
+final hasPermissionProvider = FutureProvider.autoDispose.family<bool, String>((ref, permission) async {
+  final permissions = await ref.watch(userPermissionsProvider.future);
+  return permissions[permission] == true;
 });
 
-// 🏗️ Classe pour combiner les données Firebase et MySQL
+
 class CompleteUser {
   final User firebaseUser;
   final Map<String, dynamic> mysqlData;
   
-  CompleteUser({
-    required this.firebaseUser,
-    required this.mysqlData,
-  });
+  CompleteUser({required this.firebaseUser, required this.mysqlData});
   
-  // Getter pour le nom d'affichage
-  String get displayName {
-    final mysqlName = mysqlData['name'];
-    if (mysqlName != null && mysqlName.toString().isNotEmpty) {
-      return mysqlName.toString();
-    }
-    return firebaseUser.displayName ?? firebaseUser.email?.split('@')[0] ?? 'Utilisateur';
-  }
-  
-  // Getter pour le rôle
-  String get role {
-    final role = mysqlData['role'];
-    
-    if (role is Map<String, dynamic>) {
-      return role['name'] ?? 'Étudiant';
-    } else if (role is String) {
-      return role;
-    }
-    
-    return 'Étudiant';
-  }
-  
-  // Getter pour l'email
+  String get uid => firebaseUser.uid;
   String? get email => firebaseUser.email;
   
-  // Getter pour l'UID Firebase
-  String get uid => firebaseUser.uid;
-  
-  // Getter pour l'ID MySQL
-  String? get mysqlId => mysqlData['id']?.toString();
-  
+  String get displayName {
+    return mysqlData['name']?.toString() ?? 
+           firebaseUser.displayName ?? 
+           firebaseUser.email?.split('@')[0] ?? 'Utilisateur';
+  }
+
+  String get role {
+    final r = mysqlData['role'];
+    if (r is Map) return r['name']?.toString() ?? 'Étudiant';
+    return r?.toString() ?? 'Étudiant';
+  }
+
   // Getter pour le matricule
   String? get matricule => mysqlData['matricule']?.toString();
+
+  // Getter pour le téléphone
+  String? get telephone => mysqlData['telephone']?.toString();
+
+  // Getter pour l'adresse
+  String? get adresse => mysqlData['adresse']?.toString();
   
   // Getter pour vérifier si admin
-  bool get isAdmin {
-    final lowerRole = role.toLowerCase();
-    return lowerRole == 'administrateur' || lowerRole == 'bibliothécaire';
-  }
-  
-  // Getter pour vérifier si professeur
-  bool get isProfessor {
-    final lowerRole = role.toLowerCase();
-    return lowerRole == 'professeur' || lowerRole == 'enseignant';
-  }
-  
-  // Getter pour vérifier si étudiant
-  bool get isStudent => role == 'Étudiant';
-  
-  // Getter pour les permissions
-  Map<String, dynamic> get permissions {
-    final role = mysqlData['role'];
-    if (role is Map<String, dynamic>) {
-      return role['permissions'] ?? {};
-    }
-    return {};
-  }
-  
-  // Méthode pour vérifier une permission
-  bool hasPermission(String permission) {
-    return permissions[permission] == true;
-  }
-  
-  @override
-  String toString() {
-    return 'CompleteUser{name: $displayName, role: $role, email: $email}';
-  }
+  bool get isAdmin => ['administrateur', 'bibliothécaire'].contains(role.toLowerCase());
 }
