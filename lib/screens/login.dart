@@ -191,12 +191,8 @@ class _LoginState extends ConsumerState<Login> {
               ),
             ],
           ),
-          child: const ClipOval(
-            child: Icon(
-              Icons.menu_book,
-              size: 40,
-              color: Color.fromARGB(255, 44, 80, 164),
-            ),
+          child: Center(
+            child: Image.asset('assets/images/logo.png'),
           ),
         ),
         const SizedBox(height: 16),
