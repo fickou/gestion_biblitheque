@@ -39,7 +39,6 @@ class _LivreDetailPageState extends State<LivreDetailPage> {
       if (book != null && book.isValid) {
         setState(() {
           _book = book;
-          _currentUser = _apiService.currentUser;
           _isLoading = false;
         });
         

@@ -36,7 +36,6 @@ class Emprunt {
   });
 
   factory Emprunt.fromJson(Map<String, dynamic> json) {
-    print('📋 Parsing Emprunt JSON - clés disponibles: ${json.keys}');
     
     try {
       // ID

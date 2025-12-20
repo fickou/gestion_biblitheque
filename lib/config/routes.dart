@@ -1,13 +1,16 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+
 import '../screens/admin/notification.dart';
 import '../screens/admin/profil.dart';
 import '../screens/admin/reservation.dart';
 import '../screens/admin/userdetail.dart';
 import '/screens/admin/users.dart';
+
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gestion_bibliotheque/providers/auth_provider.dart';
+
 import '../screens/catalogue.dart';
 import '../screens/dashbord.dart';
 import '../screens/home.dart';
@@ -20,6 +23,7 @@ import '../screens/admin/dashboard.dart';
 import '../screens/admin/booksdetails.dart';
 import '../screens/admin/loans.dart';
 import '../screens/emprunts.dart';
+import '../screens/livreid.dart';
 
 // Router Provider
 final routerProvider = Provider<GoRouter>((ref) {
@@ -69,12 +73,6 @@ final routerProvider = Provider<GoRouter>((ref) {
       
       // 3. Si CONNECTÉ et essaie d'accéder à Login/Signup/Home -> DASHBOARD
       if (isLoggedIn && (isAuthPage || isHomePage)) {
-        // En attente : il faudrait idéalement vérifier le rôle ici.
-        // Mais nous sommes dans une fonction synchrone (conceptuellement) du routeur.
-        // On redirige vers une page "loading" ou par défaut le dashboard étudiant,
-        // et le dashboard lui-même redirigera si besoin, OU on fait un appel async rapide.
-        
-        // Note: L'appel async dans redirect est supporté.
         try {
           final userData = await authService.getCurrentUserMySQLData();
           final role = userData?['role'];
@@ -86,7 +84,6 @@ final routerProvider = Provider<GoRouter>((ref) {
             return '/dashboard';
           }
         } catch (e) {
-          // Fallback en cas d'erreur
           return '/dashboard';
         }
       }
@@ -94,7 +91,6 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
-      // Routes publiques
       GoRoute(
         path: '/home',
         name: 'home',
@@ -136,6 +132,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/emprunts',
         name: 'emprunts',
         builder: (context, state) => const EmpruntsPage(),
+      ),
+      GoRoute(
+        path: '/livre/:id',
+        name: 'livre',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return LivreDetailPage(id: id);
+        },
       ),
       
       // Routes admin
