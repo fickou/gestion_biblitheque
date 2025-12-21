@@ -168,7 +168,7 @@ class _LoginState extends ConsumerState<Login> {
       alignment: Alignment.topLeft,
       child: IconButton(
         icon: const Icon(Icons.arrow_back, color: Colors.white, size: 28),
-        onPressed: () => context.go('/'),
+        onPressed: () => context.go('/home'),
         tooltip: 'Retour',
       ),
     );

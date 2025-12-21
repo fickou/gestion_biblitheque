@@ -59,60 +59,123 @@ class Book {
         }
     }
 
-    public function create() {
-        $query = "INSERT INTO " . $this->table . " 
-                  SET id = :id, title = :title, author = :author, 
-                      available = :available, categoryId = :categoryId,
-                      year = :year, description = :description, 
-                      copies = :copies, isbn = :isbn";
-        
-        $stmt = $this->conn->prepare($query);
-        
-        $this->id = uniqid();
-        $this->available = $this->available ?? true;
-        $this->copies = $this->copies ?? 1;
-        
-        $stmt->bindParam(':id', $this->id);
-        $stmt->bindParam(':title', $this->title);
-        $stmt->bindParam(':author', $this->author);
-        $stmt->bindParam(':available', $this->available);
-        $stmt->bindParam(':categoryId', $this->categoryId);
-        $stmt->bindParam(':year', $this->year);
-        $stmt->bindParam(':description', $this->description);
-        $stmt->bindParam(':copies', $this->copies);
-        $stmt->bindParam(':isbn', $this->isbn);
-        
-        if($stmt->execute()) {
-            return $this->id;
-        }
-        
+   public function create() {
+    // 1. VÉRIFIER/CREER LA CATÉGORIE D'ABORD
+    $categoryId = $this->createOrGetCategory($this->categoryId);
+    
+    if (!$categoryId) {
+        // Si on ne peut pas créer/récupérer la catégorie
         return false;
     }
-
-    public function update() {
-        $query = "UPDATE " . $this->table . " 
-                  SET title = :title, author = :author, 
-                      available = :available, categoryId = :categoryId,
-                      year = :year, description = :description, 
-                      copies = :copies, isbn = :isbn,
-                      updatedAt = NOW()
-                  WHERE id = :id";
-        
-        $stmt = $this->conn->prepare($query);
-        
-        $stmt->bindParam(':id', $this->id);
-        $stmt->bindParam(':title', $this->title);
-        $stmt->bindParam(':author', $this->author);
-        $stmt->bindParam(':available', $this->available);
-        $stmt->bindParam(':categoryId', $this->categoryId);
-        $stmt->bindParam(':year', $this->year);
-        $stmt->bindParam(':description', $this->description);
-        $stmt->bindParam(':copies', $this->copies);
-        $stmt->bindParam(':isbn', $this->isbn);
-        
-        return $stmt->execute();
+    
+    // 2. MAINTENANT CRÉER LE LIVRE
+    $query = "INSERT INTO " . $this->table . " 
+              SET id = :id, title = :title, author = :author, 
+                  available = :available, categoryId = :categoryId,
+                  year = :year, description = :description, 
+                  copies = :copies, isbn = :isbn,
+                  createdAt = NOW(), updatedAt = NOW()";
+    
+    $stmt = $this->conn->prepare($query);
+    
+    // Générer ID unique
+    $this->id = uniqid();
+    
+    // CORRECTION CRITIQUE: Convertir available en int (1/0)
+    $availableInt = $this->available ? 1 : 0;
+    
+    // CORRECTION: Utiliser l'ID de catégorie validé/créé
+    $this->categoryId = $categoryId;
+    
+    $stmt->bindParam(':id', $this->id);
+    $stmt->bindParam(':title', $this->title);
+    $stmt->bindParam(':author', $this->author);
+    $stmt->bindParam(':available', $availableInt, PDO::PARAM_INT); // <-- IMPORTANT
+    $stmt->bindParam(':categoryId', $this->categoryId);
+    $stmt->bindParam(':year', $this->year);
+    $stmt->bindParam(':description', $this->description);
+    $stmt->bindParam(':copies', $this->copies, PDO::PARAM_INT);
+    $stmt->bindParam(':isbn', $this->isbn);
+    
+    if($stmt->execute()) {
+        return $this->id;
     }
+    
+    return false;
+}
 
+// NOUVELLE MÉTHODE POUR GÉRER LES CATÉGORIES
+private function createOrGetCategory($categoryName) {
+    // Générer un ID propre à partir du nom
+    $categoryId = strtolower(preg_replace('/[^a-zA-Z0-9]+/', '-', trim($categoryName)));
+    
+    // Vérifier si la catégorie existe déjà
+    $checkQuery = "SELECT id FROM Categories WHERE id = :id OR name = :name";
+    $checkStmt = $this->conn->prepare($checkQuery);
+    $checkStmt->bindParam(':id', $categoryId);
+    $checkStmt->bindParam(':name', $categoryName);
+    $checkStmt->execute();
+    
+    $existingCategory = $checkStmt->fetch(PDO::FETCH_ASSOC);
+    
+    if ($existingCategory) {
+        // La catégorie existe, retourner son ID
+        return $existingCategory['id'];
+    }
+    
+    // Créer la nouvelle catégorie
+    $createQuery = "INSERT INTO Categories (id, name, description) 
+                    VALUES (:id, :name, :description)";
+    $createStmt = $this->conn->prepare($createQuery);
+    
+    $description = "Catégorie créée automatiquement: " . $categoryName;
+    
+    $createStmt->bindParam(':id', $categoryId);
+    $createStmt->bindParam(':name', $categoryName);
+    $createStmt->bindParam(':description', $description);
+    
+    if ($createStmt->execute()) {
+        return $categoryId;
+    }
+    
+    return false;
+}
+
+   public function update() {
+    // 1. VÉRIFIER/CREER LA CATÉGORIE SI NÉCESSAIRE
+    $categoryId = $this->createOrGetCategory($this->categoryId);
+    
+    if (!$categoryId) {
+        return false;
+    }
+    
+    $query = "UPDATE " . $this->table . " 
+              SET title = :title, author = :author, 
+                  available = :available, categoryId = :categoryId,
+                  year = :year, description = :description, 
+                  copies = :copies, isbn = :isbn,
+                  updatedAt = NOW()
+              WHERE id = :id";
+    
+    $stmt = $this->conn->prepare($query);
+    
+    // CORRECTION: Convertir available en int
+    $availableInt = $this->available ? 1 : 0;
+    $this->categoryId = $categoryId;
+    
+    $stmt->bindParam(':id', $this->id);
+    $stmt->bindParam(':title', $this->title);
+    $stmt->bindParam(':author', $this->author);
+    $stmt->bindParam(':available', $availableInt, PDO::PARAM_INT);
+    $stmt->bindParam(':categoryId', $this->categoryId);
+    $stmt->bindParam(':year', $this->year);
+    $stmt->bindParam(':description', $this->description);
+    $stmt->bindParam(':copies', $this->copies, PDO::PARAM_INT);
+    $stmt->bindParam(':isbn', $this->isbn);
+    
+    return $stmt->execute();
+}
+    
     public function delete() {
         $query = "DELETE FROM " . $this->table . " WHERE id = :id";
         $stmt = $this->conn->prepare($query);
@@ -171,3 +234,4 @@ class Book {
         return $stmt->execute();
     }
 }
+?>

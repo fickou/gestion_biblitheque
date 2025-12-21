@@ -162,6 +162,13 @@ try {
     $response['final_structure'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     // 9. Vérifier l'auto-incrément
+    $response['debug'] = [
+    'database' => $conn->query("SELECT DATABASE()")->fetchColumn(),
+    'host' => $conn->query("SELECT @@hostname")->fetchColumn(),
+    'port' => $conn->query("SELECT @@port")->fetchColumn(),
+    'user' => $conn->query("SELECT USER()")->fetchColumn(),
+];
+
     $stmt = $conn->query("SHOW TABLE STATUS LIKE 'reservations'");
     $tableStatus = $stmt->fetch(PDO::FETCH_ASSOC);
     $response['auto_increment'] = $tableStatus['Auto_increment'];

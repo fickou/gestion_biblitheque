@@ -46,6 +46,16 @@ class Emprunt {
     }
 
     public function create() {
+        // CORRECTION : Définir borrowDate si vide
+        if (empty($this->borrowDate)) {
+            $this->borrowDate = date('Y-m-d H:i:s');
+        }
+        
+        // Définir returnDate (14 jours après borrowDate)
+        if (empty($this->returnDate)) {
+            $this->returnDate = date('Y-m-d H:i:s', strtotime($this->borrowDate . ' +14 days'));
+        }
+        
         $query = "INSERT INTO " . $this->table . " 
                   SET id = :id, bookId = :bookId, userId = :userId,
                       borrowDate = :borrowDate, returnDate = :returnDate,
@@ -56,6 +66,15 @@ class Emprunt {
         $this->id = uniqid();
         $this->status = $this->status ?? 'En cours';
         
+        // DEBUG: Log des valeurs
+        error_log("DEBUG Emprunt::create() values:");
+        error_log("- id: " . $this->id);
+        error_log("- bookId: " . $this->bookId);
+        error_log("- userId: " . $this->userId);
+        error_log("- borrowDate: " . $this->borrowDate);
+        error_log("- returnDate: " . $this->returnDate);
+        error_log("- status: " . $this->status);
+        
         $stmt->bindParam(':id', $this->id);
         $stmt->bindParam(':bookId', $this->bookId);
         $stmt->bindParam(':userId', $this->userId);
@@ -65,25 +84,37 @@ class Emprunt {
         
         if($stmt->execute()) {
             // Mettre à jour le nombre de copies du livre
-            $book = new Book($this->conn);
-            $book->id = $this->bookId;
-            $book->updateCopies(false);
+            try {
+                require_once 'Book.php';
+                $book = new Book($this->conn);
+                $book->id = $this->bookId;
+                $book->updateCopies(false);
+                error_log("DEBUG: Copies mises à jour pour bookId: " . $this->bookId);
+            } catch (Exception $e) {
+                error_log("WARNING: Impossible de mettre à jour les copies: " . $e->getMessage());
+            }
             
             return $this->id;
+        } else {
+            $errorInfo = $stmt->errorInfo();
+            error_log("ERROR Emprunt::create() failed: " . print_r($errorInfo, true));
+            return false;
         }
-        
-        return false;
     }
 
     public function update() {
         $query = "UPDATE " . $this->table . " 
-                  SET status = :status
+                  SET status = :status,
+                      borrowDate = :borrowDate,
+                      returnDate = :returnDate
                   WHERE id = :id";
         
         $stmt = $this->conn->prepare($query);
         
         $stmt->bindParam(':id', $this->id);
         $stmt->bindParam(':status', $this->status);
+        $stmt->bindParam(':borrowDate', $this->borrowDate);
+        $stmt->bindParam(':returnDate', $this->returnDate);
         
         return $stmt->execute();
     }
@@ -94,14 +125,21 @@ class Emprunt {
         
         if($current['status'] == 'En cours' || $current['status'] == 'En retard') {
             $this->status = 'Retourné';
+            $this->borrowDate = $current['borrowDate'];
+            $this->returnDate = date('Y-m-d H:i:s'); // Date de retour actuelle
             
             if($this->update()) {
                 // Réincrémenter les copies du livre
-                $book = new Book($this->conn);
-                $book->id = $current['bookId'];
-                $book->updateCopies(true);
-                
-                return true;
+                try {
+                    require_once 'Book.php';
+                    $book = new Book($this->conn);
+                    $book->id = $current['bookId'];
+                    $book->updateCopies(true);
+                    return true;
+                } catch (Exception $e) {
+                    error_log("ERROR returnBook: " . $e->getMessage());
+                    return false;
+                }
             }
         }
         
