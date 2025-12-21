@@ -861,5 +861,7 @@ class ApiService {
       };
     }
   }
+
+  Future<dynamic> getUserReservations(String id) async {}
   
 }

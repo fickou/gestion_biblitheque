@@ -987,7 +987,7 @@ class __AdminDashboardContentState extends ConsumerState<_AdminDashboardContent>
         context.go('/admin/emprunts');
         break;
       case 4:
-        context.go('/admin/settings');
+        context.go('/profiladmin');
         break;
     }
   }
