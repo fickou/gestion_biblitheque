@@ -184,26 +184,21 @@ class ApiService {
     
     if (response.statusCode == 200) {
       
-      // VOICI LA CORRECTION : NETTOYER LA RÉPONSE DES WARNINGS PHP
       String cleanBody = response.body;
       
-      // 1. Supprimer les balises HTML <br> et <b>
       cleanBody = cleanBody.replaceAll(RegExp(r'<br\s*/?>'), '');
       cleanBody = cleanBody.replaceAll(RegExp(r'<b>.*?</b>'), '');
       
-      // 2. Chercher le début du JSON (première accolade {)
       final jsonStartIndex = cleanBody.indexOf('{');
       if (jsonStartIndex > 0) {
         cleanBody = cleanBody.substring(jsonStartIndex);
       }
       
-      // 3. Chercher la fin du JSON (dernière accolade })
       final jsonEndIndex = cleanBody.lastIndexOf('}');
       if (jsonEndIndex != -1 && jsonEndIndex < cleanBody.length - 1) {
         cleanBody = cleanBody.substring(0, jsonEndIndex + 1);
       }
       
-      // 4. Nettoyer les espaces et nouvelles lignes
       cleanBody = cleanBody.trim();
       
       try {
