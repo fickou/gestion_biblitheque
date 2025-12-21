@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '/widgets/notif.dart';
 import 'package:go_router/go_router.dart';
+import '/services/api_service.dart';
+
+import '/models/user.dart';
 
 class UserDetailPage extends StatefulWidget {
   final String id;
@@ -12,6 +15,9 @@ class UserDetailPage extends StatefulWidget {
 }
 
 class _UserDetailPageState extends State<UserDetailPage> {
+  final ApiService _apiService = ApiService();
+  List<User> userList = [];
+  bool isLoading = true;
   // Données mockées de l'utilisateur
   final Map<String, dynamic> mockUserDetail = {
     'id': "1",

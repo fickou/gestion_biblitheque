@@ -130,22 +130,20 @@ class _ReservationsPageState extends State<ReservationsPage> {
     }
   }
 
-  String _formatDate(String? dateString) {
-    if (dateString == null) return 'Date inconnue';
+  String _formatDate(DateTime? reserveDate) {
+    if (reserveDate == null) return 'Date inconnue';
     
     try {
-      final date = DateTime.parse(dateString);
-      return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+      return '${reserveDate.day.toString().padLeft(2, '0')}/${reserveDate.month.toString().padLeft(2, '0')}/${reserveDate.year}';
     } catch (e) {
-      return dateString;
+      return 'Date invalide';
     }
   }
 
-  bool _isReservationExpired(String? dateString) {
-    if (dateString == null) return false;
+  bool _isReservationExpired(DateTime? reserveDate) {
+    if (reserveDate == null) return false;
     
     try {
-      final reserveDate = DateTime.parse(dateString);
       final now = DateTime.now();
       final daysDifference = now.difference(reserveDate).inDays;
       return daysDifference > 7; // Une réservation expire après 7 jours
@@ -268,10 +266,10 @@ class _ReservationsPageState extends State<ReservationsPage> {
   Widget _buildReservationsList() {
     return Column(
       children: _reservations.map((reservation) {
-        final bookTitle = reservation['bookTitle'] ?? 'Titre inconnu';
-        final bookAuthor = reservation['bookAuthor'] ?? 'Auteur inconnu';
-        final status = reservation['status'] ?? 'Inconnu';
-        final reserveDate = reservation['reserveDate'];
+       final bookTitle = reservation.book.title;
+        final bookAuthor = reservation.book.author;
+        final status = reservation.status;
+        final reserveDate = reservation.reserveDate;
         final isExpired = _isReservationExpired(reserveDate);
         final isAvailable = status == 'Disponible';
         final isPending = status == 'En attente';

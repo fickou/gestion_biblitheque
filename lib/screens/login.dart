@@ -168,7 +168,7 @@ class _LoginState extends ConsumerState<Login> {
       alignment: Alignment.topLeft,
       child: IconButton(
         icon: const Icon(Icons.arrow_back, color: Colors.white, size: 28),
-        onPressed: () => context.go('/'),
+        onPressed: () => context.go('/home'),
         tooltip: 'Retour',
       ),
     );
@@ -191,12 +191,8 @@ class _LoginState extends ConsumerState<Login> {
               ),
             ],
           ),
-          child: const ClipOval(
-            child: Icon(
-              Icons.menu_book,
-              size: 40,
-              color: Color.fromARGB(255, 44, 80, 164),
-            ),
+          child: Center(
+            child: Image.asset('assets/images/logo.png'),
           ),
         ),
         const SizedBox(height: 16),

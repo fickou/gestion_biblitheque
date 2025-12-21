@@ -962,15 +962,6 @@ class _AddEditBookFormState extends State<AddEditBookForm> {
         updatedAt: DateTime.now(),
       );
 
-      // 5. LOGS DE DÉBOGAGE
-      print('=== DONNÉES ENVOYÉES ===');
-      print('Mode: ${isNewBook ? "AJOUT" : "ÉDITION"}');
-      print('Titre: ${book.title}');
-      print('Disponible: ${book.available}');
-      print('Total exemplaires: ${book.copies}');
-      print('Catégorie: ${book.category?.name}');
-      print('========================');
-
       Map<String, dynamic> result;
       
       if (widget.book != null) {

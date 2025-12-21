@@ -30,15 +30,29 @@ class Reservation {
     }
 
     public function create() {
+        // Générer un ID unique pour la réservation
+        $this->id = 'res_' . time() . '_' . mt_rand(100000, 999999);
+        
+        // Vérifier l'unicité de l'ID
+        $checkQuery = "SELECT COUNT(*) FROM " . $this->table . " WHERE id = :id";
+        $checkStmt = $this->conn->prepare($checkQuery);
+        $checkStmt->bindParam(':id', $this->id);
+        $checkStmt->execute();
+        
+        while ($checkStmt->fetchColumn() > 0) {
+            $this->id = 'res_' . time() . '_' . mt_rand(100000, 999999);
+            $checkStmt->bindParam(':id', $this->id);
+            $checkStmt->execute();
+        }
+        
+        $this->status = $this->status ?? 'En attente';
+        $this->reserveDate = date('Y-m-d H:i:s');
+        
         $query = "INSERT INTO " . $this->table . " 
-                  SET id = :id, bookId = :bookId, userId = :userId,
-                      reserveDate = :reserveDate, status = :status";
+                SET id = :id, bookId = :bookId, userId = :userId,
+                    reserveDate = :reserveDate, status = :status";
         
         $stmt = $this->conn->prepare($query);
-        
-        $this->id = uniqid();
-        $this->status = $this->status ?? 'En attente';
-        $this->reserveDate = date('Y-m-d');
         
         $stmt->bindParam(':id', $this->id);
         $stmt->bindParam(':bookId', $this->bookId);
@@ -46,7 +60,13 @@ class Reservation {
         $stmt->bindParam(':reserveDate', $this->reserveDate);
         $stmt->bindParam(':status', $this->status);
         
-        return $stmt->execute();
+        if($stmt->execute()) {
+            return $this->id;
+        } else {
+            $errorInfo = $stmt->errorInfo();
+            error_log("ERROR Reservation::create() failed: " . print_r($errorInfo, true));
+            return false;
+        }
     }
 
     public function updateStatus() {

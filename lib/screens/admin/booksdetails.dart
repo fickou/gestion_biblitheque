@@ -36,7 +36,7 @@ class _BookDetailPageState extends State<BookDetailPage> {
       final book = await _apiService.getBookById(widget.id);
       setState(() {
         _book = book;
-        _isLoading = false;
+        _isLoading = false; // <-- CORRECTION ICI
       });
     } catch (e) {
       setState(() {
@@ -191,7 +191,7 @@ class _BookDetailPageState extends State<BookDetailPage> {
                   ),
                 ),
               )
-            else if (_error != null || _book == null)
+            else if (_error != null)
               Expanded(
                 child: Center(
                   child: Column(
@@ -202,10 +202,32 @@ class _BookDetailPageState extends State<BookDetailPage> {
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 32),
                         child: Text(
-                          _error ?? 'Livre non trouvé',
+                          _error!,
                           textAlign: TextAlign.center,
                           style: const TextStyle(color: Colors.red),
                         ),
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: () => context.go('/admin/books'),
+                        child: const Text('Retour aux livres'),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else if (_book == null)
+              Expanded(
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.book_outlined, size: 64, color: Color(0xFF64748B)),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Livre non trouvé',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Color(0xFF64748B)),
                       ),
                       const SizedBox(height: 16),
                       ElevatedButton(
@@ -587,33 +609,6 @@ class _BookDetailPageState extends State<BookDetailPage> {
           overflow: TextOverflow.ellipsis,
         ),
       ],
-    );
-  }
-  
-  Widget _buildInfoItemMobile(String label, String value) {
-    return SizedBox(
-      width: double.infinity,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 12,
-              color: Color(0xFF6B7280),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: Color(0xFF111827),
-            ),
-          ),
-        ],
-      ),
     );
   }
   

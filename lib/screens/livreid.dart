@@ -1,29 +1,71 @@
 import 'package:flutter/material.dart';
-import '/models/user.dart';
-import '../models/book.dart';
+import '/models/reservation.dart';
+import '/models/emprunt.dart';
+import '/models/book.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '/services/api_service.dart';
+import '/providers/auth_provider.dart';
 
-class LivreDetailPage extends StatefulWidget {
+class LivreDetailPage extends ConsumerStatefulWidget {
   final String id;
   const LivreDetailPage({super.key, required this.id});
 
   @override
-  State<LivreDetailPage> createState() => _LivreDetailPageState();
+  ConsumerState<LivreDetailPage> createState() => _LivreDetailPageState();
 }
 
-class _LivreDetailPageState extends State<LivreDetailPage> {
+class _LivreDetailPageState extends ConsumerState<LivreDetailPage> {
   final ApiService _apiService = ApiService();
   Book? _book;
   List<Book> _similarBooks = [];
   bool _isLoading = true;
   String _errorMessage = '';
-  User? _currentUser;
+  bool _isReserving = false;
+  bool _isBorrowing = false;
+  List<dynamic> _userEmprunts = [];
+  List<dynamic> _userReservations = [];
 
   @override
   void initState() {
     super.initState();
     _loadBookData();
+    _loadUserEmpruntsAndReservations();
+  }
+
+  // Récupérer l'utilisateur connecté via Riverpod
+  CompleteUser? get _currentUser {
+    final completeUserAsync = ref.watch(completeUserProvider);
+    return completeUserAsync.value;
+  }
+
+  // Vérifier si l'utilisateur est connecté
+  bool get _isAuthenticated {
+    return ref.watch(isLoggedInProvider);
+  }
+
+  Future<void> _loadUserEmpruntsAndReservations() async {
+    final user = _currentUser;
+    if (user == null) return;
+
+    try {
+      // Charger les emprunts de l'utilisateur
+      final emprunts = await _apiService.getUserEmprunts(user.uid);
+      setState(() {
+        _userEmprunts = emprunts;
+      });
+
+      // Charger les réservations de l'utilisateur
+      final allReservations = await _apiService.getReservations();
+      final userReservations = allReservations
+          .where((reservation) => reservation.user?.id == user.uid)
+          .toList();
+      setState(() {
+        _userReservations = userReservations;
+      });
+    } catch (e) {
+      print('Erreur chargement données utilisateur: $e');
+    }
   }
 
   Future<void> _loadBookData() async {
@@ -33,17 +75,13 @@ class _LivreDetailPageState extends State<LivreDetailPage> {
     });
 
     try {
-      // Charger les informations du livre
       final book = await _apiService.getBookById(widget.id);
       
       if (book != null && book.isValid) {
         setState(() {
           _book = book;
-          _currentUser = _apiService.currentUser;
           _isLoading = false;
         });
-       cc 
-        // Charger des livres similaires (par catégorie)
         _loadSimilarBooks(book);
       } else {
         setState(() {
@@ -63,16 +101,12 @@ class _LivreDetailPageState extends State<LivreDetailPage> {
   Future<void> _loadSimilarBooks(Book currentBook) async {
     try {
       final allBooks = await _apiService.getBooks();
-      
-      // Filtrer les livres par catégorie similaire (exclure le livre actuel)
       final similarBooks = allBooks
           .where((book) => 
               book.id != currentBook.id && 
               book.isValid &&
               book.category?.id == currentBook.category?.id)
           .toList();
-      
-      // Limiter à 3 livres maximum
       final limitedBooks = similarBooks.length > 3 
           ? similarBooks.sublist(0, 3) 
           : similarBooks;
@@ -85,13 +119,94 @@ class _LivreDetailPageState extends State<LivreDetailPage> {
     }
   }
 
+  // 📌 MÉTHODE POUR RÉSERVER AVEC VÉRIFICATIONS
   Future<void> _handleReserve() async {
-    if (_book == null || _currentUser == null) return;
+    // Vérification 1: Utilisateur connecté
+    if (!_isAuthenticated || _currentUser == null) {
+      _showNotConnectedDialog();
+      return;
+    }
+
+    // Vérification 2: Livre disponible
+    if (_book == null) return;
+
+    // Vérification 3: L'utilisateur n'a pas déjà emprunté ce livre
+    final hasBorrowed = _userEmprunts.any((emprunt) => 
+        emprunt is Emprunt && emprunt.bookId == _book!.id && emprunt.status != 'returned');
+    
+    if (hasBorrowed) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Vous avez déjà emprunté "${_book!.title}"'),
+          backgroundColor: Colors.orange,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+
+    // Vérification 4: L'utilisateur n'a pas déjà réservé ce livre
+    final hasReserved = _userReservations.any((reservation) => 
+        reservation is Reservation && reservation.book?.id == _book!.id && reservation.status == 'pending');
+    
+    if (hasReserved) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Vous avez déjà réservé "${_book!.title}"'),
+          backgroundColor: Colors.orange,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+
+    // Vérification 5: Le livre peut être réservé
+    if (!_book!.canBeReserved) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Ce livre ne peut pas être réservé actuellement'),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+
+    // Demander confirmation
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirmer la réservation'),
+        content: Text('Voulez-vous réserver "${_book!.title}" ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF2C50A4),
+            ),
+            child: const Text('Réserver'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() {
+      _isReserving = true;
+    });
 
     try {
+      debugPrint("📘 Book ID: ${_book!.id}");
+      debugPrint("👤 User ID: ${_currentUser!.uid}");
+
       final result = await _apiService.createReservation(
         _book!.id,
-        _currentUser!.id,
+        _currentUser!.uid,
       );
 
       if (result['success'] == true) {
@@ -99,16 +214,21 @@ class _LivreDetailPageState extends State<LivreDetailPage> {
           SnackBar(
             content: Text('"${_book!.title}" réservé avec succès'),
             backgroundColor: const Color(0xFF10B981),
+            duration: const Duration(seconds: 3),
           ),
         );
         
-        // Recharger les données du livre
-        await _loadBookData();
+        // Recharger les données
+        await Future.wait([
+          _loadBookData(),
+          _loadUserEmpruntsAndReservations(),
+        ]);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(result['message']?.toString() ?? 'Erreur lors de la réservation'),
             backgroundColor: const Color(0xFFEF4444),
+            duration: const Duration(seconds: 3),
           ),
         );
       }
@@ -117,28 +237,115 @@ class _LivreDetailPageState extends State<LivreDetailPage> {
         SnackBar(
           content: Text('Erreur lors de la réservation: $e'),
           backgroundColor: const Color(0xFFEF4444),
+          duration: const Duration(seconds: 3),
         ),
       );
+    } finally {
+      setState(() {
+        _isReserving = false;
+      });
     }
   }
 
+  // 📌 MÉTHODE POUR EMPRUNTER AVEC VÉRIFICATIONS
   Future<void> _handleBorrow() async {
-    if (_book == null || _currentUser == null) return;
+    // Vérification 1: Utilisateur connecté
+    if (!_isAuthenticated || _currentUser == null) {
+      _showNotConnectedDialog();
+      return;
+    }
 
-    if (!_book!.canBeBorrowed) {
+    // Vérification 2: Livre disponible
+    if (_book == null) return;
+
+    // Vérification 3: L'utilisateur n'a pas déjà emprunté ce livre
+    final hasBorrowed = _userEmprunts.any((emprunt) => 
+        emprunt is Emprunt && emprunt.bookId == _book!.id && emprunt.status != 'returned');
+    
+    if (hasBorrowed) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Ce livre n\'est pas disponible pour l\'emprunt'),
-          backgroundColor: Color(0xFFF59E0B),
+        SnackBar(
+          content: Text('Vous avez déjà emprunté "${_book!.title}"'),
+          backgroundColor: Colors.orange,
+          duration: const Duration(seconds: 3),
         ),
       );
       return;
     }
 
+    // Vérification 4: L'utilisateur n'a pas déjà réservé ce livre
+    final hasReserved = _userReservations.any((reservation) => 
+        reservation is Reservation && reservation.book?.id == _book!.id && reservation.status == 'pending');
+    
+    if (hasReserved) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Vous avez déjà réservé "${_book!.title}"'),
+          backgroundColor: Colors.orange,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+
+    // Vérification 5: Le livre est disponible pour l'emprunt
+    if (!_book!.canBeBorrowed) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Ce livre n\'est pas disponible pour l\'emprunt'),
+          backgroundColor: Colors.orange,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+
+    // Demander confirmation avec durée d'emprunt
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirmer l\'emprunt'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Voulez-vous emprunter "${_book!.title}" ?'),
+            const SizedBox(height: 8),
+            const Text(
+              'Durée d\'emprunt: 14 jours',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF2C50A4),
+            ),
+            child: const Text('Emprunter'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() {
+      _isBorrowing = true;
+    });
+
     try {
       final result = await _apiService.createEmprunt(
         _book!.id,
-        _currentUser!.id,
+        _currentUser!.uid,
       );
 
       if (result['success'] == true) {
@@ -146,16 +353,21 @@ class _LivreDetailPageState extends State<LivreDetailPage> {
           SnackBar(
             content: Text('"${_book!.title}" emprunté avec succès'),
             backgroundColor: const Color(0xFF10B981),
+            duration: const Duration(seconds: 3),
           ),
         );
         
-        // Recharger les données du livre
-        await _loadBookData();
+        // Recharger les données
+        await Future.wait([
+          _loadBookData(),
+          _loadUserEmpruntsAndReservations(),
+        ]);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(result['message']?.toString() ?? 'Erreur lors de l\'emprunt'),
             backgroundColor: const Color(0xFFEF4444),
+            duration: const Duration(seconds: 3),
           ),
         );
       }
@@ -164,9 +376,88 @@ class _LivreDetailPageState extends State<LivreDetailPage> {
         SnackBar(
           content: Text('Erreur lors de l\'emprunt: $e'),
           backgroundColor: const Color(0xFFEF4444),
+          duration: const Duration(seconds: 3),
         ),
       );
+    } finally {
+      setState(() {
+        _isBorrowing = false;
+      });
     }
+  }
+
+  void _showNotConnectedDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Connexion requise'),
+        content: const Text('Vous devez être connecté pour réserver ou emprunter un livre.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              context.go('/login');
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF2C50A4),
+            ),
+            child: const Text('Se connecter'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Méthode pour vérifier si l'utilisateur peut réserver
+  bool _canReserve() {
+    if (!_isAuthenticated || _currentUser == null || _book == null) return false;
+    
+    final hasBorrowed = _userEmprunts.any((emprunt) => 
+        emprunt is Emprunt && emprunt.bookId == _book!.id && emprunt.status != 'returned');
+    
+    final hasReserved = _userReservations.any((reservation) => 
+        reservation is Reservation && reservation.book?.id == _book!.id && reservation.status == 'pending');
+    
+    return !hasBorrowed && !hasReserved && _book!.canBeReserved;
+  }
+
+  // Méthode pour vérifier si l'utilisateur peut emprunter
+  bool _canBorrow() {
+    if (!_isAuthenticated || _currentUser == null || _book == null) return false;
+    
+    final hasBorrowed = _userEmprunts.any((emprunt) => 
+        emprunt is Emprunt && emprunt.bookId == _book!.id && emprunt.status != 'returned');
+    
+    final hasReserved = _userReservations.any((reservation) => 
+        reservation is Reservation && reservation.book?.id == _book!.id && reservation.status == 'pending');
+    
+    return !hasBorrowed && !hasReserved && _book!.canBeBorrowed;
+  }
+
+  // Méthode pour obtenir le texte de l'avatar (inspirée de ProfilePage)
+  String _getAvatarText(CompleteUser user) {
+    final name = user.displayName;
+    if (name.isNotEmpty) {
+      final nameParts = name.split(' ');
+      if (nameParts.length >= 2) {
+        return '${nameParts[0][0]}${nameParts[1][0]}'.toUpperCase();
+      } else if (nameParts[0].isNotEmpty) {
+        return nameParts[0][0].toUpperCase();
+      }
+    }
+    
+    final mysqlAvatar = user.mysqlData['avatarText'];
+    if (mysqlAvatar != null && mysqlAvatar.toString().isNotEmpty) {
+      return mysqlAvatar.toString();
+    }
+    
+    return user.email != null && user.email!.isNotEmpty 
+        ? user.email![0].toUpperCase()
+        : 'U';
   }
 
   Widget _buildBottomNav(BuildContext context) {
@@ -234,6 +525,16 @@ class _LivreDetailPageState extends State<LivreDetailPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Observer l'état d'authentification comme dans ProfilePage
+    final isAuthenticated = ref.watch(isLoggedInProvider);
+    
+    // Si non authentifié et qu'on essaie de réserver/emprunter, on redirige
+    if (!isAuthenticated && (_isReserving || _isBorrowing)) {
+      Future.delayed(Duration.zero, () {
+        context.go('/login');
+      });
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
@@ -253,6 +554,23 @@ class _LivreDetailPageState extends State<LivreDetailPage> {
           ),
         ),
         actions: [
+          // Affichage de l'avatar utilisateur si connecté
+          if (_currentUser != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              child: CircleAvatar(
+                radius: 16,
+                backgroundColor: Colors.white,
+                child: Text(
+                  _getAvatarText(_currentUser!),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2C50A4),
+                  ),
+                ),
+              ),
+            ),
           IconButton(
             icon: const Icon(Icons.refresh, color: Colors.white),
             onPressed: _loadBookData,
@@ -489,6 +807,99 @@ class _LivreDetailPageState extends State<LivreDetailPage> {
                                   color: Color(0xFF334155),
                                 ),
                               ),
+                              // Info utilisateur si connecté
+                              if (_currentUser != null) ...[
+                                const SizedBox(height: 16),
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF0F9FF),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: const Color(0xFF2C50A4).withOpacity(0.3),
+                                    ),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          CircleAvatar(
+                                            radius: 12,
+                                            backgroundColor: const Color(0xFF2C50A4),
+                                            child: Text(
+                                              _getAvatarText(_currentUser!),
+                                              style: const TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            _currentUser!.displayName,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 14,
+                                              color: Color(0xFF2C50A4),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 8),
+                                      // Vérifier si déjà emprunté
+                                      if (_userEmprunts.any((emprunt) => 
+                                          emprunt is Emprunt && emprunt.bookId == _book!.id && emprunt.status != 'returned'))
+                                        Row(
+                                          children: [
+                                            Icon(
+                                              Icons.check_circle,
+                                              color: Colors.green[700],
+                                              size: 16,
+                                            ),
+                                            const SizedBox(width: 8),
+                                            const Text(
+                                              'Vous avez déjà emprunté ce livre',
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                color: Colors.green,
+                                              ),
+                                            ),
+                                          ],
+                                        )
+                                      // Vérifier si déjà réservé
+                                      else if (_userReservations.any((reservation) => 
+                                          reservation is Reservation && reservation.book?.id == _book!.id && reservation.status == 'pending'))
+                                        Row(
+                                          children: [
+                                            Icon(
+                                              Icons.access_time,
+                                              color: Colors.orange[700],
+                                              size: 16,
+                                            ),
+                                            const SizedBox(width: 8),
+                                            const Text(
+                                              'Vous avez déjà réservé ce livre',
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                color: Colors.orange,
+                                              ),
+                                            ),
+                                          ],
+                                        )
+                                      else
+                                        const Text(
+                                          'Vous pouvez réserver ou emprunter ce livre',
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            color: Colors.grey,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         ),
@@ -499,31 +910,80 @@ class _LivreDetailPageState extends State<LivreDetailPage> {
                         children: [
                           Expanded(
                             child: ElevatedButton(
-                              onPressed: _book!.canBeReserved ? _handleReserve : null,
+                              onPressed: _isReserving ? null : (_canReserve() ? _handleReserve : null),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF2C50A4),
                                 foregroundColor: Colors.white,
                                 disabledBackgroundColor: const Color(0xFFCBD5E1),
                                 padding: const EdgeInsets.symmetric(vertical: 14),
                               ),
-                              child: const Text("Réserver"),
+                              child: _isReserving
+                                  ? const SizedBox(
+                                      height: 20,
+                                      width: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : const Text("Réserver"),
                             ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: OutlinedButton(
-                              onPressed: _book!.canBeBorrowed ? _handleBorrow : null,
+                              onPressed: _isBorrowing ? null : (_canBorrow() ? _handleBorrow : null),
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: const Color(0xFF2C50A4),
                                 side: const BorderSide(color: Color(0xFF2C50A4)),
                                 disabledForegroundColor: const Color(0xFFCBD5E1),
                                 padding: const EdgeInsets.symmetric(vertical: 14),
                               ),
-                              child: const Text("Emprunter"),
+                              child: _isBorrowing
+                                  ? const SizedBox(
+                                      height: 20,
+                                      width: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Color(0xFF2C50A4),
+                                      ),
+                                    )
+                                  : const Text("Emprunter"),
                             ),
                           ),
                         ],
                       ),
+                      // Messages d'information
+                      if (!_isAuthenticated) ...[
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.orange[50],
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.orange[300]!),
+                          ),
+                          child: GestureDetector(
+                            onTap: () => context.go('/login'),
+                            child: const Row(
+                              children: [
+                                Icon(Icons.info, color: Colors.orange, size: 20),
+                                SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Connectez-vous pour réserver ou emprunter ce livre',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.orange,
+                                    ),
+                                  ),
+                                ),
+                                Icon(Icons.arrow_forward, color: Colors.orange, size: 16),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                       if (_similarBooks.isNotEmpty) ...[
                         const SizedBox(height: 32),
                         // Livres similaires
@@ -612,13 +1072,23 @@ class _LivreDetailPageState extends State<LivreDetailPage> {
             color: Color.fromARGB(255, 44, 80, 164),
           ),
           const SizedBox(height: 16),
-          Text(
+          const Text(
             'Chargement du livre...',
             style: TextStyle(
               fontSize: 16,
-              color: const Color(0xFF64748B),
+              color: Color(0xFF64748B),
             ),
           ),
+          if (!_isAuthenticated) ...[
+            const SizedBox(height: 8),
+            const Text(
+              'Veuillez vous connecter pour réserver ou emprunter',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.orange,
+              ),
+            ),
+          ],
         ],
       ),
     );

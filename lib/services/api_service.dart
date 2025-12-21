@@ -173,25 +173,76 @@ class ApiService {
   }
 
   Future<Book?> getBookById(String id) async {
-    try {
-      final response = await http.get(
-        ApiConfig.getBookUri(id),
-        headers: _getHeaders(),
-      );
-
-      if (response.statusCode == 200) {
-        try {
-          final data = jsonDecode(response.body);
-          return Book.fromJson(Map<String, dynamic>.from(data));
-        } catch (e) {
-          return null;
-        }
+  try {
+    
+    final uri = ApiConfig.getBookUri(id);
+    
+    final response = await http.get(
+      uri,
+      headers: _getHeaders(),
+    );
+    
+    if (response.statusCode == 200) {
+      
+      // VOICI LA CORRECTION : NETTOYER LA RÉPONSE DES WARNINGS PHP
+      String cleanBody = response.body;
+      
+      // 1. Supprimer les balises HTML <br> et <b>
+      cleanBody = cleanBody.replaceAll(RegExp(r'<br\s*/?>'), '');
+      cleanBody = cleanBody.replaceAll(RegExp(r'<b>.*?</b>'), '');
+      
+      // 2. Chercher le début du JSON (première accolade {)
+      final jsonStartIndex = cleanBody.indexOf('{');
+      if (jsonStartIndex > 0) {
+        cleanBody = cleanBody.substring(jsonStartIndex);
       }
-      return null;
-    } catch (e) {
-      return null;
+      
+      // 3. Chercher la fin du JSON (dernière accolade })
+      final jsonEndIndex = cleanBody.lastIndexOf('}');
+      if (jsonEndIndex != -1 && jsonEndIndex < cleanBody.length - 1) {
+        cleanBody = cleanBody.substring(0, jsonEndIndex + 1);
+      }
+      
+      // 4. Nettoyer les espaces et nouvelles lignes
+      cleanBody = cleanBody.trim();
+      
+      try {
+        final data = jsonDecode(cleanBody);
+        return Book.fromJson(Map<String, dynamic>.from(data));
+      } catch (e) {
+        print('❌ Erreur parsing JSON nettoyé: $e');
+        
+        final start = response.body.indexOf('{');
+        final end = response.body.lastIndexOf('}');
+        
+        if (start != -1 && end != -1 && end > start) {
+          final extractedJson = response.body.substring(start, end + 1);
+          
+          String finalJson = extractedJson.replaceAll(RegExp(r'<[^>]*>'), '');
+          
+          finalJson = finalJson.replaceAll(RegExp(r'Deprecated[^\n]*'), '');
+          
+          finalJson = finalJson.trim();
+          
+          print('🔧 JSON extrait manuellement: $finalJson');
+          
+          try {
+            final data = jsonDecode(finalJson);
+            return Book.fromJson(Map<String, dynamic>.from(data));
+          } catch (e2) {
+            print('❌ Échec du parsing manuel: $e2');
+          }
+        }
+        
+        return null;
+      }
     }
+    return null;
+    
+  } catch (e) {
+    return null;
   }
+}
 
   Future<Map<String, dynamic>> createBook(Book book) async {
     try {

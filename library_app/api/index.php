@@ -432,46 +432,236 @@ function handlePostRequest($request, $db, $data) {
             $book = new Book($db);
             $book->title = $data['title'] ?? '';
             $book->author = $data['author'] ?? '';
-            $book->categoryId = $data['categoryId'] ?? 1;
+            
+            // CORRECTION 1: GESTION DE LA CATÉGORIE
+            // Vérifier plusieurs formats possibles
+            $categoryName = null;
+            
+            // Format 1: $data['category']['name'] (objet)
+            if (isset($data['category']) && is_array($data['category']) && isset($data['category']['name'])) {
+                $categoryName = $data['category']['name'];
+            }
+            // Format 2: $data['categoryName'] (string)
+            elseif (isset($data['categoryName'])) {
+                $categoryName = $data['categoryName'];
+            }
+            // Format 3: $data['category'] (string directe)
+            elseif (isset($data['category']) && is_string($data['category'])) {
+                $categoryName = $data['category'];
+            }
+            // Format 4: $data['categoryId'] (utiliser comme nom par défaut)
+            elseif (isset($data['categoryId'])) {
+                $categoryName = $data['categoryId'];
+            }
+            
+            // Utiliser "non-categorise" par défaut
+            $book->categoryId = $categoryName ?? 'non-categorise';
+            
+            // CORRECTION 2: GESTION DE LA DISPONIBILITÉ
+            // Par défaut à true pour les nouveaux livres
+            $book->available = isset($data['available']) ? (bool)$data['available'] : true;
+            
             $book->year = $data['year'] ?? date('Y');
             $book->description = $data['description'] ?? '';
             $book->copies = $data['copies'] ?? 1;
             $book->isbn = $data['isbn'] ?? '';
             
-            if ($book->create()) {
-                echo json_encode(["success" => true]);
+            // DEBUG: Log avant création
+            file_put_contents('api_debug.log', 
+                "Creating book via POST:\n" .
+                "- Title: " . $book->title . "\n" .
+                "- Author: " . $book->author . "\n" .
+                "- Available: " . ($book->available ? 'true' : 'false') . "\n" .
+                "- Category: " . $book->categoryId . "\n" .
+                "- Year: " . $book->year . "\n" .
+                "- Copies: " . $book->copies . "\n" .
+                "================\n", 
+                FILE_APPEND
+            );
+            
+            $newBookId = $book->create();
+            
+            if ($newBookId) {
+                echo json_encode([
+                    "success" => true,
+                    "message" => "Livre créé avec succès",
+                    "data" => ["id" => $newBookId]
+                ]);
             } else {
-                echo json_encode(["success" => false]);
+                echo json_encode([
+                    "success" => false, 
+                    "message" => "Erreur lors de la création du livre"
+                ]);
             }
             break;
             
         case 'emprunts':
             // Créer un emprunt - Accessible à tous (tokens désactivés)
-            $emprunt = new Emprunt($db);
-            $emprunt->userId = $data['userId'] ?? null;
-            $emprunt->bookId = $data['bookId'] ?? null;
-            $emprunt->dateEmprunt = date('Y-m-d H:i:s');
-            $emprunt->dateRetourPrevue = $data['dateRetourPrevue'] ?? date('Y-m-d H:i:s', strtotime('+14 days'));
             
-            if ($emprunt->create()) {
-                echo json_encode(["success" => true]);
-            } else {
-                echo json_encode(["success" => false]);
+            // LOG DÉTAILLÉ POUR DÉBOGUER
+            file_put_contents('api_debug.log', 
+                "=== CREATION EMPRUNT ===\n" .
+                "Time: " . date('Y-m-d H:i:s') . "\n" .
+                "Données reçues: " . print_r($data, true) . "\n",
+                FILE_APPEND
+            );
+            
+            try {
+                // Vérifier les données requises
+                if (!isset($data['bookId']) || empty($data['bookId'])) {
+                    throw new Exception("bookId est requis");
+                }
+                
+                if (!isset($data['userId']) || empty($data['userId'])) {
+                    throw new Exception("userId est requis");
+                }
+                
+                $emprunt = new Emprunt($db);
+                $emprunt->userId = $data['userId'];
+                $emprunt->bookId = $data['bookId'];
+                
+                // CORRECTION : Définir explicitement borrowDate
+                $emprunt->borrowDate = date('Y-m-d H:i:s');
+                
+                // DEBUG: Log des valeurs
+                file_put_contents('api_debug.log', 
+                    "Valeurs Emprunt:\n" .
+                    "- userId: " . $emprunt->userId . "\n" .
+                    "- bookId: " . $emprunt->bookId . "\n" .
+                    "- borrowDate: " . $emprunt->borrowDate . "\n" .
+                    "- returnDate: " . $emprunt->returnDate . "\n" .
+                    "- status: " . ($emprunt->status ?? 'En cours') . "\n",
+                    FILE_APPEND
+                );
+                
+                // Créer l'emprunt
+                $result = $emprunt->create();
+                
+                if ($result) {
+                    // Log du succès
+                    file_put_contents('api_debug.log', 
+                        "✅ Emprunt créé avec succès, ID: $result\n",
+                        FILE_APPEND
+                    );
+                    
+                    echo json_encode([
+                        "success" => true,
+                        "message" => "Emprunt créé avec succès",
+                        "data" => [
+                            "id" => $result,
+                            "userId" => $emprunt->userId,
+                            "bookId" => $emprunt->bookId,
+                            "borrowDate" => $emprunt->borrowDate,
+                            "returnDate" => $emprunt->returnDate,
+                            "status" => $emprunt->status
+                        ]
+                    ]);
+                    
+                } else {
+                    throw new Exception("Échec de la création de l'emprunt dans la base de données");
+                }
+                
+            } catch (Exception $e) {
+                file_put_contents('api_debug.log', 
+                    "❌ Erreur création emprunt: " . $e->getMessage() . "\n" .
+                    "Stack trace: " . $e->getTraceAsString() . "\n",
+                    FILE_APPEND
+                );
+                
+                http_response_code(500);
+                echo json_encode([
+                    "success" => false,
+                    "message" => "Erreur lors de la création de l'emprunt: " . $e->getMessage(),
+                    "debug" => [
+                        "error" => $e->getMessage(),
+                        "file" => $e->getFile(),
+                        "line" => $e->getLine()
+                    ]
+                ]);
             }
             break;
             
         case 'reservations':
             // Créer une réservation - Accessible à tous (tokens désactivés)
-            $reservation = new Reservation($db);
-            $reservation->userId = $data['userId'] ?? null;
-            $reservation->bookId = $data['bookId'] ?? null;
-            $reservation->dateReservation = date('Y-m-d H:i:s');
-            $reservation->status = 'pending';
             
-            if ($reservation->create()) {
-                echo json_encode(["success" => true]);
-            } else {
-                echo json_encode(["success" => false]);
+            // LOG POUR DÉBOGUER
+            file_put_contents('api_debug.log', 
+                "=== CREATION RESERVATION ===\n" .
+                "Time: " . date('Y-m-d H:i:s') . "\n" .
+                "Données reçues: " . print_r($data, true) . "\n",
+                FILE_APPEND
+            );
+            
+            try {
+                // Vérifier les données requises
+                if (!isset($data['bookId']) || empty($data['bookId'])) {
+                    throw new Exception("bookId est requis");
+                }
+                
+                if (!isset($data['userId']) || empty($data['userId'])) {
+                    throw new Exception("userId est requis");
+                }
+                
+                $reservation = new Reservation($db);
+                $reservation->userId = $data['userId'];
+                $reservation->bookId = $data['bookId'];
+                
+                // NOTE: Le modèle Reservation utilise 'reserveDate' et non 'dateReservation'
+                // 'reserveDate' est automatiquement défini dans le modèle avec date('Y-m-d')
+                $reservation->status = 'En attente'; // Le modèle attend ce statut
+                
+                // DEBUG: Log des valeurs
+                file_put_contents('api_debug.log', 
+                    "Valeurs Reservation:\n" .
+                    "- userId: " . $reservation->userId . "\n" .
+                    "- bookId: " . $reservation->bookId . "\n" .
+                    "- reserveDate: " . (isset($reservation->reserveDate) ? $reservation->reserveDate : 'non défini') . "\n" .
+                    "- status: " . $reservation->status . "\n",
+                    FILE_APPEND
+                );
+                
+                // Créer la réservation
+                $result = $reservation->create();
+                
+                if ($result) {
+                    // Log du succès
+                    file_put_contents('api_debug.log', 
+                        "✅ Réservation créée avec succès, ID: {$reservation->id}\n",
+                        FILE_APPEND
+                    );
+                    
+                    echo json_encode([
+                        "success" => true,
+                        "message" => "Réservation créée avec succès",
+                        "data" => [
+                            "id" => $reservation->id,
+                            "userId" => $reservation->userId,
+                            "bookId" => $reservation->bookId,
+                            "reserveDate" => $reservation->reserveDate,
+                            "status" => $reservation->status
+                        ]
+                    ]);
+                } else {
+                    throw new Exception("Échec de la création de la réservation");
+                }
+                
+            } catch (Exception $e) {
+                file_put_contents('api_debug.log', 
+                    "❌ Erreur création réservation: " . $e->getMessage() . "\n" .
+                    "Stack trace: " . $e->getTraceAsString() . "\n",
+                    FILE_APPEND
+                );
+                
+                http_response_code(500);
+                echo json_encode([
+                    "success" => false,
+                    "message" => "Erreur lors de la création de la réservation: " . $e->getMessage(),
+                    "debug" => [
+                        "error" => $e->getMessage(),
+                        "file" => $e->getFile(),
+                        "line" => $e->getLine()
+                    ]
+                ]);
             }
             break;
             
@@ -532,18 +722,35 @@ function handlePutRequest($request, $db, $data) {
             $book->id = $parts[1];
             $book->title = $data['title'] ?? '';
             $book->author = $data['author'] ?? '';
-            $book->categoryId = $data['categoryId'] ?? 1;
+            
+            // Même logique de catégorie que pour POST
+            $categoryName = null;
+            if (isset($data['category']) && is_array($data['category']) && isset($data['category']['name'])) {
+                $categoryName = $data['category']['name'];
+            } elseif (isset($data['categoryName'])) {
+                $categoryName = $data['categoryName'];
+            } elseif (isset($data['category']) && is_string($data['category'])) {
+                $categoryName = $data['category'];
+            } elseif (isset($data['categoryId'])) {
+                $categoryName = $data['categoryId'];
+            }
+            
+            $book->categoryId = $categoryName ?? 'non-categorise';
+            
+            // Disponibilité en booléen
+            $book->available = isset($data['available']) ? (bool)$data['available'] : true;
+            
             $book->year = $data['year'] ?? date('Y');
             $book->description = $data['description'] ?? '';
             $book->copies = $data['copies'] ?? 1;
             $book->isbn = $data['isbn'] ?? '';
-            $book->available = $data['available'] ?? 1;
             
             if ($book->update()) {
-                echo json_encode(["success" => true]);
+                echo json_encode(["success" => true, "message" => "Livre mis à jour"]);
             } else {
-                echo json_encode(["success" => false]);
+                echo json_encode(["success" => false, "message" => "Erreur lors de la mise à jour"]);
             }
             break;
     }
 }
+?>
