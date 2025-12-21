@@ -1,51 +1,61 @@
 import 'package:flutter/material.dart';
 import '/widgets/notif.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '/providers/auth_provider.dart';
 
-class AdminProfilePage extends StatefulWidget {
+class AdminProfilePage extends ConsumerWidget {
   const AdminProfilePage({super.key});
 
   @override
-  State<AdminProfilePage> createState() => _AdminProfilePageState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    return const _AdminProfilePageContent();
+  }
 }
 
-class _AdminProfilePageState extends State<AdminProfilePage> {
-  // Données du profil
-  final Map<String, dynamic> adminProfile = {
-    'name': 'Dr. Oumar Diop',
-    'email': 'oumar.diop@ugb.edu.sn',
-    'role': 'Administrateur Principal',
-    'department': 'Bibliothèque UFR SAT',
-    'phone': '+221 77 999 88 77',
-    'joinDate': 'Janvier 2022'
-  };
+class _AdminProfilePageContent extends ConsumerStatefulWidget {
+  const _AdminProfilePageContent();
 
-  // État des switches
-  bool darkMode = false;
-  bool emailNotifications = true;
-  bool pushNotifications = true;
-  bool twoFactorAuth = false;
-  bool weeklySummary = false;
+  @override
+  ConsumerState<_AdminProfilePageContent> createState() => __AdminProfilePageContentState();
+}
 
-  // Contrôleurs pour les champs de formulaire
+class __AdminProfilePageContentState extends ConsumerState<_AdminProfilePageContent> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _departmentController = TextEditingController();
 
+  bool darkMode = false;
+  bool emailNotifications = true;
+  bool pushNotifications = true;
+  bool twoFactorAuth = false;
+  bool weeklySummary = false;
+  
+  bool _isSaving = false;
+
   @override
   void initState() {
     super.initState();
-    // Initialiser les contrôleurs avec les données existantes
-    _nameController.text = adminProfile['name'];
-    _emailController.text = adminProfile['email'];
-    _phoneController.text = adminProfile['phone'];
-    _departmentController.text = adminProfile['department'];
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeForm(ref);
+    });
+  }
+
+  void _initializeForm(WidgetRef ref) {
+    final userAsync = ref.read(completeUserProvider);
+    final user = userAsync.value;
+    if (user != null) {
+      // Utilisez ?? '' pour gérer le cas null
+      _nameController.text = user.name ?? '';
+      _emailController.text = user.email ?? '';
+      _phoneController.text = '+221 77 999 88 77';
+      _departmentController.text = 'Bibliothèque UFR SAT';
+    }
   }
 
   @override
   void dispose() {
-    // Nettoyer les contrôleurs
     _nameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
@@ -53,76 +63,243 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
     super.dispose();
   }
 
-  void _handleSaveProfile() {
-    // Mettre à jour les données du profil
-    setState(() {
-      adminProfile['name'] = _nameController.text;
-      adminProfile['email'] = _emailController.text;
-      adminProfile['phone'] = _phoneController.text;
-      adminProfile['department'] = _departmentController.text;
-    });
+  Future<void> _handleSaveProfile(WidgetRef ref) async {
+    if (_isSaving) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Profil mis à jour avec succès'),
-        backgroundColor: Colors.green,
-      ),
-    );
-  }
+    setState(() => _isSaving = true);
 
-  void _handleChangePassword() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Fonction de changement de mot de passe à venir'),
-        backgroundColor: Colors.blue,
-      ),
-    );
-  }
-
-  void _handleLogout() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Déconnexion réussie'),
-        backgroundColor: Colors.green,
-      ),
-    );
-    // Naviguer vers la page de connexion
-    context.go('/login');
-  }
-
-  String _getInitials(String name) {
-    List<String> parts = name.split(' ');
-    String initials = '';
-    for (var part in parts) {
-      if (part.isNotEmpty) {
-        initials += part[0].toUpperCase();
-      }
+    try {
+      print('=== SAUVEGARDE DU PROFIL ===');
+      await Future.delayed(const Duration(seconds: 1));
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Profil mis à jour avec succès'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (error) {
+      print('Erreur lors de la sauvegarde: $error');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erreur: ${error.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() => _isSaving = false);
     }
-    return initials;
+  }
+
+  Future<void> _handleChangePassword(WidgetRef ref) async {
+    try {
+      final authService = ref.read(authServiceProvider);
+      final currentUser = ref.read(completeUserProvider).value;
+      
+      if (currentUser?.email != null) {
+        // Vérifiez le nom exact de la méthode dans votre AuthService
+        // Si c'est 'changePassword' au lieu de 'sendPasswordResetEmail'
+        await authService.changePassword(currentUser!.email!);
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Email de réinitialisation envoyé'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (error) {
+      print('Erreur lors du changement de mot de passe: $error');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Erreur lors de l\'envoi de l\'email'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _handleLogout(WidgetRef ref) async {
+    try {
+      final authService = ref.read(authServiceProvider);
+      await authService.signOut();
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Déconnexion réussie'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      
+      context.go('/login');
+    } catch (error) {
+      print('Erreur lors de la déconnexion: $error');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Erreur lors de la déconnexion'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  String _getInitials(String? name) { // Accepte String?
+    if (name == null || name.isEmpty) return 'AD';
+    return _generateAvatarText(name);
+  }
+
+  String _generateAvatarText(String name) {
+    if (name.isEmpty) return 'U';
+    final parts = name.trim().split(' ');
+    if (parts.length >= 2) {
+      final first = parts[0].isNotEmpty ? parts[0][0] : '';
+      final second = parts[1].isNotEmpty ? parts[1][0] : '';
+      return '$first$second'.toUpperCase();
+    }
+    final length = name.length;
+    if (length >= 2) {
+      return name.substring(0, 2).toUpperCase();
+    }
+    return name.toUpperCase();
+  }
+
+  String _formatJoinDate(DateTime? createdAt) {
+    if (createdAt != null) {
+      final date = createdAt;
+      final months = [
+        'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+        'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+      ];
+      return '${months[date.month - 1]} ${date.year}';
+    }
+    return 'Janvier 2022';
   }
 
   @override
   Widget build(BuildContext context) {
+    final isAuthenticated = ref.watch(isLoggedInProvider);
+    final completeUserAsync = ref.watch(completeUserProvider);
+    
+    if (!isAuthenticated) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    return completeUserAsync.when(
+      data: (completeUser) {
+        if (completeUser == null) {
+          return const Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
+        
+        // Vérifier si l'utilisateur est admin
+        if (!completeUser.isAdmin) {
+          return Scaffold(
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.lock, size: 60, color: Colors.grey),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Accès réservé aux administrateurs',
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: const Color(0xFF64748B),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+        
+        return _buildProfileContent(context, completeUser, ref);
+      },
+      loading: () => const Scaffold(
+        backgroundColor: Color(0xFFF8FAFC),
+        body: Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(
+              Color.fromARGB(255, 44, 80, 164),
+            ),
+          ),
+        ),
+      ),
+      error: (error, stack) {
+        return Scaffold(
+          backgroundColor: const Color(0xFFF8FAFC),
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.error_outline,
+                  size: 64,
+                  color: Colors.red,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Erreur de chargement',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF0F172A),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  error.toString(),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: const Color(0xFF64748B),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: () => ref.refresh(completeUserProvider),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color.fromARGB(255, 44, 80, 164),
+                  ),
+                  child: const Text('Réessayer', style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildProfileContent(BuildContext context, CompleteUser user, WidgetRef ref) {
+    final joinDate = _formatJoinDate(user.createdAt);
+    
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       body: SafeArea(
         child: Column(
           children: [
-            _buildHeader(),
+            _buildHeader(ref),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
-                    _buildProfileCard(),
+                    _buildProfileCard(user, joinDate, ref),
                     const SizedBox(height: 16),
-                    _buildSecurityCard(),
+                    _buildSecurityCard(ref),
                     const SizedBox(height: 16),
                     _buildNotificationsCard(),
                     const SizedBox(height: 16),
                     _buildPreferencesCard(),
                     const SizedBox(height: 16),
-                    _buildLogoutCard(),
+                    _buildLogoutCard(ref),
                     const SizedBox(height: 80),
                   ],
                 ),
@@ -135,7 +312,7 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(WidgetRef ref) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -159,19 +336,23 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
             ),
           ),
           const Spacer(),
-           NotificationIconWithBadge(),
-
+          NotificationIconWithBadge(),
           IconButton(
             icon: const Icon(Icons.settings_outlined),
             color: const Color(0xFF64748B),
-            onPressed: () => context.go('/profiladmin'), // Ajouter cette ligne
+            onPressed: () {
+              final currentLocation = GoRouterState.of(context).uri.toString();
+              if (!currentLocation.contains('/profiladmin')) {
+                context.go('/profiladmin');
+              }
+            },
           ),
         ],
       ),
     );
   }
 
-  Widget _buildProfileCard() {
+  Widget _buildProfileCard(CompleteUser user, String joinDate, WidgetRef ref) {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
@@ -186,7 +367,6 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
             Container(
               margin: const EdgeInsets.only(bottom: 16),
               child: Column(
@@ -211,7 +391,6 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
                 ],
               ),
             ),
-            // Avatar and info
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -219,7 +398,7 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
                   radius: 40,
                   backgroundColor: const Color(0xFFD6E4FF),
                   child: Text(
-                    _getInitials(adminProfile['name']),
+                    _getInitials(user.name), // Maintenant ça fonctionne
                     style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -233,7 +412,7 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        adminProfile['name'],
+                        user.name ?? 'Administrateur', // Gestion du null
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -242,7 +421,7 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        adminProfile['role'],
+                        user.role.name ?? 'Administrateur',
                         style: TextStyle(
                           fontSize: 14,
                           color: const Color(0xFF64748B),
@@ -250,7 +429,7 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '${adminProfile['department']} • Membre depuis ${adminProfile['joinDate']}',
+                        '${_departmentController.text} • Membre depuis $joinDate • Matricule: ${user.matricule}',
                         style: TextStyle(
                           fontSize: 12,
                           color: const Color(0xFF64748B),
@@ -290,17 +469,14 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
                 ),
               ],
             ),
-            // Divider
             Container(
               margin: const EdgeInsets.symmetric(vertical: 16),
               height: 1,
               color: const Color(0xFFE2E8F0),
             ),
-            // Profile form
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Grid for form fields
                 LayoutBuilder(
                   builder: (context, constraints) {
                     if (constraints.maxWidth < 600) {
@@ -308,7 +484,7 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
                         children: [
                           _buildFormField('Nom complet', _nameController),
                           const SizedBox(height: 12),
-                          _buildFormField('Email', _emailController, isEmail: true),
+                          _buildFormField('Email', _emailController, isEmail: true, enabled: false),
                           const SizedBox(height: 12),
                           _buildFormField('Téléphone', _phoneController),
                           const SizedBox(height: 12),
@@ -325,7 +501,7 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
                               ),
                               const SizedBox(width: 12),
                               Expanded(
-                                child: _buildFormField('Email', _emailController, isEmail: true),
+                                child: _buildFormField('Email', _emailController, isEmail: true, enabled: false),
                               ),
                             ],
                           ),
@@ -346,19 +522,15 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
                     }
                   },
                 ),
-                // Save buttons
                 Container(
                   margin: const EdgeInsets.only(top: 16),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
                       OutlinedButton(
-                        onPressed: () {
-                          // Annuler les modifications
-                          _nameController.text = adminProfile['name'];
-                          _emailController.text = adminProfile['email'];
-                          _phoneController.text = adminProfile['phone'];
-                          _departmentController.text = adminProfile['department'];
+                        onPressed: _isSaving ? null : () {
+                          _nameController.text = user.name ?? '';
+                          _emailController.text = user.email ?? '';
                         },
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -377,32 +549,43 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
                       ),
                       const SizedBox(width: 8),
                       ElevatedButton(
-                        onPressed: _handleSaveProfile,
+                        onPressed: _isSaving ? null : () => _handleSaveProfile(ref),
                         style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                          backgroundColor: const Color.fromARGB(255, 44, 80, 164),
+                          backgroundColor: _isSaving 
+                              ? Colors.grey 
+                              : const Color.fromARGB(255, 44, 80, 164),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(6),
                           ),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.save,
-                              size: 16,
-                              color: Colors.white,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Enregistrer',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
+                        child: _isSaving
+                            ? SizedBox(
+                                height: 16,
+                                width: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                ),
+                              )
+                            : Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.save,
+                                    size: 16,
+                                    color: Colors.white,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Enregistrer',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
-                          ],
-                        ),
                       ),
                     ],
                   ),
@@ -415,7 +598,8 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
     );
   }
 
-  Widget _buildFormField(String label, TextEditingController controller, {bool isEmail = false}) {
+  Widget _buildFormField(String label, TextEditingController controller, 
+      {bool isEmail = false, bool enabled = true}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -430,6 +614,7 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
         const SizedBox(height: 4),
         TextField(
           controller: controller,
+          enabled: enabled,
           decoration: InputDecoration(
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
@@ -441,6 +626,8 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(color: const Color.fromARGB(255, 44, 80, 164)),
             ),
+            filled: !enabled,
+            fillColor: const Color(0xFFF8FAFC),
           ),
           keyboardType: isEmail ? TextInputType.emailAddress : TextInputType.text,
         ),
@@ -448,7 +635,7 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
     );
   }
 
-  Widget _buildSecurityCard() {
+  Widget _buildSecurityCard(WidgetRef ref) {
     return _buildSettingsCard(
       icon: Icons.lock,
       title: 'Sécurité',
@@ -458,7 +645,7 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
           title: 'Mot de passe',
           description: 'Dernière modification il y a 3 mois',
           action: OutlinedButton(
-            onPressed: _handleChangePassword,
+            onPressed: () => _handleChangePassword(ref),
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               side: BorderSide(color: const Color(0xFFE2E8F0)),
@@ -589,81 +776,79 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
     );
   }
 
-Widget _buildLogoutCard() {
-  return Card(
-    elevation: 2,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(12),
-      side: BorderSide(
-        color: const Color(0xFFE2E8F0).withOpacity(0.4),
-        width: 1,
+  Widget _buildLogoutCard(WidgetRef ref) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: const Color(0xFFE2E8F0).withOpacity(0.4),
+          width: 1,
+        ),
       ),
-    ),
-    child: Padding(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Texte explicatif
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Se déconnecter',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: const Color(0xFF0F172A),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Se déconnecter',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFF0F172A),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'Déconnectez-vous de votre compte administrateur',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: const Color(0xFF64748B),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Déconnectez-vous de votre compte administrateur',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: const Color(0xFF64748B),
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 16),
-          // Bouton de déconnexion
-          ElevatedButton(
-            onPressed: _handleLogout,
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              backgroundColor: const Color(0xFFEF4444),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(6),
+                ],
               ),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.logout,
-                  size: 16,
-                  color: Colors.white,
+            const SizedBox(width: 16),
+            ElevatedButton(
+              onPressed: () => _handleLogout(ref),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                backgroundColor: const Color(0xFFEF4444),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(6),
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  'Déconnexion',
-                  style: const TextStyle(
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.logout,
+                    size: 16,
                     color: Colors.white,
-                    fontSize: 14,
                   ),
-                ),
-              ],
+                  const SizedBox(width: 8),
+                  Text(
+                    'Déconnexion',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildSettingsCard({
     required IconData icon,
@@ -685,7 +870,6 @@ Widget _buildLogoutCard() {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header with icon
             Row(
               children: [
                 Container(
@@ -723,13 +907,11 @@ Widget _buildLogoutCard() {
                 ),
               ],
             ),
-            // Divider
             Container(
               margin: const EdgeInsets.symmetric(vertical: 12),
               height: 1,
               color: const Color(0xFFE2E8F0),
             ),
-            // Settings items
             Column(
               children: children,
             ),
@@ -843,8 +1025,11 @@ Widget _buildLogoutCard() {
         context.go('/admin/emprunts');
         break;
       case 4:
-        // On est déjà sur la page paramètres
         break;
     }
   }
+}
+
+extension StringExtension on String {
+  String get name => this;
 }

@@ -155,4 +155,9 @@ class CompleteUser {
   
   // Getter pour vérifier si admin
   bool get isAdmin => ['administrateur', 'bibliothécaire'].contains(role.toLowerCase());
+
+  DateTime? get createdAt => null;
+
+  String? get name => mysqlData['nom']?.toString();
+
 }

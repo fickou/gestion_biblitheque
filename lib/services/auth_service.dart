@@ -312,4 +312,24 @@ class AuthService {
       default: return 'Erreur d\'authentification: $code';
     }
   }
+  
+  Future<void> changePassword(String email) async {
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+    } catch (e) {
+      print('Erreur changement mot de passe: $e');
+      rethrow;
+    }
+  }
+   Future<void> sendPasswordResetEmail(String email) async {
+    try {
+      // Si vous utilisez Firebase
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+      // Ou si vous utilisez une API
+      // await _apiService.sendPasswordResetEmail(email);
+    } catch (e) {
+      print('Erreur envoi email réinitialisation: $e');
+      rethrow;
+    }
+  }
 }
