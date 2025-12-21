@@ -216,9 +216,51 @@ class User {
   @override
   int get hashCode => id.hashCode;
 
-  @override
-  String toString() {
-    return 'User{id: $id, name: $name, email: $email, role: ${role.name}}';
+  // Getters pour la page de détail utilisateur
+  // Ces getters sont utilisés par UserDetailPage
+  String get studentId => matricule; // Utilise matricule comme studentId
+  String get department => ''; // À remplir si vous avez ce champ dans votre API
+  String get phone => ''; // À remplir si vous avez ce champ dans votre API
+  String get level => ''; // À remplir si vous avez ce champ dans votre API
+  
+  String get registrationDate {
+    if (createdAt != null) {
+      return '${createdAt!.day}/${createdAt!.month}/${createdAt!.year}';
+    }
+    return 'Date inconnue';
   }
 
+  // IMPORTANT : Corrigez le formattedStatus pour utiliser 'actif'/'suspendu'
+  String get formattedStatus {
+    switch (status.toLowerCase()) {
+      case 'actif': // ← Correction : 'actif' avec 't'
+        return 'Actif';
+      case 'suspendu': // ← Correction : 'suspendu' avec 't'
+        return 'Suspendu';
+      case 'inactif':
+        return 'Inactif';
+      default:
+        return status;
+    }
+  }
+
+  // Méthode pour suspendre/réactiver
+  User copyWithStatus(String newStatus) {
+    return User(
+      id: id,
+      name: name,
+      email: email,
+      matricule: matricule,
+      role: role,
+      avatarText: avatarText,
+      status: newStatus,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return 'User{id: $id, name: $name, email: $email, status: $status, role: ${role.name}}';
+  }
 }
