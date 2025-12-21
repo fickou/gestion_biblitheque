@@ -42,7 +42,7 @@ class _LivreDetailPageState extends State<LivreDetailPage> {
           _currentUser = _apiService.currentUser;
           _isLoading = false;
         });
-        
+       cc 
         // Charger des livres similaires (par catégorie)
         _loadSimilarBooks(book);
       } else {
