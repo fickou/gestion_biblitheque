@@ -263,7 +263,7 @@ class _BooksAdminPageState extends State<BooksAdminPage> {
                               Text(
                                 'Gestion des livres',
                                 style: TextStyle(
-                                  fontSize: 28,
+                                  fontSize: 24,
                                   fontWeight: FontWeight.bold,
                                   color: const Color(0xFF0F172A),
                                 ),
@@ -291,7 +291,7 @@ class _BooksAdminPageState extends State<BooksAdminPage> {
                             ),
                             child: const Row(
                               children: [
-                                Icon(Icons.add, size: 20),
+                                Icon(Icons.add, size: 10),
                                 SizedBox(width: 8),
                                 Text('Ajouter un livre'),
                               ],

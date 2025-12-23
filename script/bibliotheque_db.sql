@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Hôte : 127.0.0.1
--- Généré le : dim. 14 déc. 2025 à 16:40
+-- Généré le : mar. 23 déc. 2025 à 15:36
 -- Version du serveur : 10.4.32-MariaDB
 -- Version de PHP : 8.2.12
 
@@ -21,96 +21,6 @@ SET time_zone = "+00:00";
 -- Base de données : `bibliotheque_db`
 --
 
-DELIMITER $$
---
--- Procédures
---
-CREATE DEFINER=`root`@`localhost` PROCEDURE `BorrowBook` (IN `p_bookId` VARCHAR(50), IN `p_userId` VARCHAR(50), IN `p_borrowDate` DATE, IN `p_days` INT)   BEGIN
-    DECLARE bookAvailable BOOLEAN;
-    DECLARE userRole VARCHAR(50);
-    DECLARE loanPeriod INT;
-    
-    -- Vérifier la disponibilité du livre
-    SELECT available INTO bookAvailable FROM Books WHERE id = p_bookId;
-    
-    -- Obtenir le rôle de l'utilisateur pour déterminer la période d'emprunt
-    SELECT roleId INTO userRole FROM Users WHERE id = p_userId;
-    
-    -- Déterminer la période d'emprunt selon le rôle
-    IF userRole = '4' THEN -- Professeur
-        SET loanPeriod = 60; -- 60 jours pour les professeurs
-    ELSE
-        SET loanPeriod = 30; -- 30 jours pour les autres
-    END IF;
-    
-    IF bookAvailable = TRUE THEN
-        -- Mettre à jour la disponibilité du livre
-        UPDATE Books 
-        SET available = FALSE, copies = copies - 1 
-        WHERE id = p_bookId AND copies > 0;
-        
-        -- Créer l'emprunt
-        INSERT INTO Emprunts (id, bookId, userId, borrowDate, returnDate, status)
-        VALUES (
-            UUID(),
-            p_bookId,
-            p_userId,
-            p_borrowDate,
-            DATE_ADD(p_borrowDate, INTERVAL loanPeriod DAY),
-            'En cours'
-        );
-        
-        SELECT 'SUCCESS' as status, 'Livre emprunté avec succès' as message;
-    ELSE
-        SELECT 'ERROR' as status, 'Livre non disponible' as message;
-    END IF;
-END$$
-
-CREATE DEFINER=`root`@`localhost` PROCEDURE `ReturnBook` (IN `p_empruntId` VARCHAR(50))   BEGIN
-    DECLARE v_bookId VARCHAR(50);
-    DECLARE v_status VARCHAR(50);
-    
-    -- Récupérer les informations de l'emprunt
-    SELECT bookId, status INTO v_bookId, v_status
-    FROM Emprunts WHERE id = p_empruntId;
-    
-    IF v_status = 'En cours' OR v_status = 'En retard' THEN
-        -- Mettre à jour le statut de l'emprunt
-        UPDATE Emprunts 
-        SET status = 'Retourné' 
-        WHERE id = p_empruntId;
-        
-        -- Réincrémenter les copies disponibles
-        UPDATE Books 
-        SET copies = copies + 1,
-            available = CASE 
-                WHEN copies + 1 > 0 THEN TRUE 
-                ELSE FALSE 
-            END
-        WHERE id = v_bookId;
-        
-        SELECT 'SUCCESS' as status, 'Livre retourné avec succès' as message;
-    ELSE
-        SELECT 'ERROR' as status, 'Emprunt déjà retourné ou annulé' as message;
-    END IF;
-END$$
-
---
--- Fonctions
---
-CREATE DEFINER=`root`@`localhost` FUNCTION `CheckLateLoans` (`p_userId` VARCHAR(50)) RETURNS INT(11) DETERMINISTIC BEGIN
-    DECLARE lateCount INT;
-    
-    SELECT COUNT(*) INTO lateCount
-    FROM Emprunts
-    WHERE userId = p_userId 
-      AND status = 'En retard';
-    
-    RETURN lateCount;
-END$$
-
-DELIMITER ;
-
 -- --------------------------------------------------------
 
 --
@@ -118,7 +28,7 @@ DELIMITER ;
 --
 
 CREATE TABLE `books` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `title` varchar(200) NOT NULL,
   `author` varchar(100) NOT NULL,
   `available` tinyint(1) DEFAULT 1,
@@ -136,11 +46,11 @@ CREATE TABLE `books` (
 --
 
 INSERT INTO `books` (`id`, `title`, `author`, `available`, `categoryId`, `year`, `description`, `copies`, `isbn`, `createdAt`, `updatedAt`) VALUES
-(1, 'Introduction à Python', 'J. Dupont', 1, 1, '2023', 'Un guide complet pour apprendre les bases de la programmation Python.', 2, '978-1234567890', '2025-12-04 23:13:33', '2025-12-04 23:13:33'),
+(1, 'Introduction à Python', 'J. Dupont', 0, 1, '2023', 'Un guide complet pour apprendre les bases de la programmation Python.', 1, '978-1234567890', '2025-12-04 23:13:33', '2025-12-22 16:51:55'),
 (2, 'Mathématiques Appliquées', 'M. Martin', 1, 2, '2022', 'Mathématiques pour les sciences appliquées.', 1, '978-1234567891', '2025-12-04 23:13:33', '2025-12-04 23:13:33'),
 (3, 'Physique Quantique', 'A. Bernard', 0, 3, '2021', 'Introduction à la physique quantique moderne.', 0, '978-1234567892', '2025-12-04 23:13:33', '2025-12-04 23:13:33'),
 (4, 'Chimie Organique', 'L. Petit', 1, 4, '2023', 'Fondamentaux de la chimie organique.', 3, '978-1234567893', '2025-12-04 23:13:33', '2025-12-04 23:13:33'),
-(5, 'Algorithmique Avancée', 'P. Dubois', 1, 1, '2023', 'Algorithmes avancés et structures de données.', 2, '978-1234567894', '2025-12-04 23:13:33', '2025-12-04 23:13:33'),
+(5, 'Algorithmique Avancée', 'P. Dubois', 1, 1, '2023', 'Algorithmes avancés et structures de données.', 2, '978-1234567894', '2025-12-04 23:13:33', '2025-12-21 13:02:28'),
 (6, 'Base de Données', 'S. Laurent', 0, 1, '2022', 'Conception et gestion de bases de données.', 0, '978-1234567895', '2025-12-04 23:13:33', '2025-12-04 23:13:33'),
 (7, 'Intelligence Artificielle', 'R. Thomas', 1, 1, '2024', 'Introduction à l\'intelligence artificielle moderne.', 1, '978-1234567896', '2025-12-04 23:13:33', '2025-12-04 23:13:33'),
 (8, 'Biologie Moléculaire', 'C. Moreau', 1, 5, '2023', 'Introduction à la biologie moléculaire.', 1, '978-1234567897', '2025-12-04 23:13:33', '2025-12-04 23:13:33'),
@@ -151,7 +61,9 @@ INSERT INTO `books` (`id`, `title`, `author`, `available`, `categoryId`, `year`,
 (13, 'Deep Learning avec TensorFlow', 'M. Kim', 1, 1, '2024', 'Deep Learning avec TensorFlow 2.x.', 2, '978-1234567902', '2025-12-04 23:13:33', '2025-12-04 23:13:33'),
 (14, 'Systèmes Distribués', 'P. Müller', 1, 1, '2023', 'Conception de systèmes distribués.', 1, '978-1234567903', '2025-12-04 23:13:33', '2025-12-04 23:13:33'),
 (15, 'Histoire de l\'Informatique', 'J. Watson', 1, 7, '2023', 'Histoire de l\'évolution de l\'informatique.', 1, '978-1234567904', '2025-12-04 23:13:33', '2025-12-04 23:13:33'),
-(16, 'Économie Numérique', 'A. Smith', 1, 8, '2024', 'Les principes de l\'économie numérique.', 2, '978-1234567905', '2025-12-04 23:13:33', '2025-12-04 23:13:33');
+(16, 'Économie Numérique', 'A. Smith', 1, 8, '2024', 'Les principes de l\'économie numérique.', 2, '978-1234567905', '2025-12-04 23:13:33', '2025-12-04 23:13:33'),
+(694476, 'Le petit prince', 'Fenix', 0, 1, '2025', 'Le fenix', 1, '12345', '2025-12-18 21:48:20', '2025-12-21 21:37:25'),
+(694977, 'c++', 'Claude', 1, 1, '2025', '', 4, '12345', '2025-12-22 16:54:02', '2025-12-22 16:54:02');
 
 -- --------------------------------------------------------
 
@@ -175,7 +87,7 @@ CREATE TABLE `booksbycategory` (
 --
 
 CREATE TABLE `categories` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(100) NOT NULL,
   `description` text DEFAULT NULL,
   `createdAt` timestamp NOT NULL DEFAULT current_timestamp(),
@@ -237,7 +149,7 @@ CREATE TABLE `emprunthistory` (
 --
 
 CREATE TABLE `emprunts` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `bookId` int(11) DEFAULT NULL,
   `userId` varchar(50) NOT NULL,
   `borrowDate` date NOT NULL,
@@ -257,7 +169,11 @@ INSERT INTO `emprunts` (`id`, `bookId`, `userId`, `borrowDate`, `returnDate`, `s
 (4, 9, '2', '2025-01-02', '2025-02-02', 'En retard', '2025-12-04 23:13:33'),
 (5, 12, '6', '2024-12-15', '2025-01-15', 'En retard', '2025-12-04 23:13:33'),
 (6, 13, '8', '2025-01-05', '2025-02-05', 'En cours', '2025-12-04 23:13:33'),
-(7, 15, '11', '2025-01-10', '2025-03-10', 'En cours', '2025-12-04 23:13:33');
+(7, 15, '11', '2025-01-10', '2025-03-10', 'En cours', '2025-12-04 23:13:33'),
+(6947, 5, '2Lee76Z1z9PSI5KojpMvk6tOEss1', '2025-12-21', '2025-12-21', 'Retourné', '2025-12-21 13:01:18'),
+(694848, 1, '2Lee76Z1z9PSI5KojpMvk6tOEss1', '2025-12-21', '2025-12-21', 'Retourné', '2025-12-21 19:22:29'),
+(6949772, 1, '2Lee76Z1z9PSI5KojpMvk6tOEss1', '2025-12-22', '2026-01-05', 'En cours', '2025-12-22 16:51:55'),
+(2147483647, 694476, '2Lee76Z1z9PSI5KojpMvk6tOEss1', '2025-12-21', '2026-01-04', 'En cours', '2025-12-21 21:37:25');
 
 -- --------------------------------------------------------
 
@@ -266,7 +182,7 @@ INSERT INTO `emprunts` (`id`, `bookId`, `userId`, `borrowDate`, `returnDate`, `s
 --
 
 CREATE TABLE `notifications` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `type` varchar(50) NOT NULL,
   `title` varchar(200) NOT NULL,
   `message` text NOT NULL,
@@ -316,7 +232,7 @@ CREATE TABLE `recentactivities` (
 --
 
 CREATE TABLE `reservations` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `bookId` int(11) DEFAULT NULL,
   `userId` varchar(50) NOT NULL,
   `reserveDate` date NOT NULL,
@@ -332,7 +248,13 @@ INSERT INTO `reservations` (`id`, `bookId`, `userId`, `reserveDate`, `status`, `
 (1, 3, '3', '2025-01-10', 'En attente', '2025-12-04 23:13:33'),
 (2, 4, '4', '2025-01-08', 'Disponible', '2025-12-04 23:13:33'),
 (3, 13, '7', '2025-01-09', 'En attente', '2025-12-04 23:13:33'),
-(4, 6, '5', '2025-01-12', 'En attente', '2025-12-04 23:13:33');
+(4, 6, '5', '2025-01-12', 'En attente', '2025-12-04 23:13:33'),
+(6947, 3, '2Lee76Z1z9PSI5KojpMvk6tOEss1', '2025-12-21', 'pending', '2025-12-21 13:02:54'),
+(6948, 3, '2Lee76Z1z9PSI5KojpMvk6tOEss1', '2025-12-21', 'En attente', '2025-12-21 13:08:32'),
+(6949, 6, '2Lee76Z1z9PSI5KojpMvk6tOEss1', '2025-12-21', 'En attente', '2025-12-21 13:10:53'),
+(6950, 6, '2Lee76Z1z9PSI5KojpMvk6tOEss1', '2025-12-21', 'En attente', '2025-12-21 15:35:10'),
+(6951, 3, '2Lee76Z1z9PSI5KojpMvk6tOEss1', '2025-12-21', 'En attente', '2025-12-21 21:38:32'),
+(6952, 694476, '2Lee76Z1z9PSI5KojpMvk6tOEss1', '2025-12-22', 'En attente', '2025-12-22 16:51:28');
 
 -- --------------------------------------------------------
 
@@ -341,7 +263,7 @@ INSERT INTO `reservations` (`id`, `bookId`, `userId`, `reserveDate`, `status`, `
 --
 
 CREATE TABLE `roles` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(100) NOT NULL,
   `permissions` text DEFAULT NULL,
   `createdAt` timestamp NOT NULL DEFAULT current_timestamp(),
@@ -381,7 +303,7 @@ CREATE TABLE `topbooks` (
 --
 
 CREATE TABLE `users` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(100) NOT NULL,
   `email` varchar(100) NOT NULL,
   `firebase_uid` varchar(128) DEFAULT NULL,
@@ -410,7 +332,13 @@ INSERT INTO `users` (`id`, `name`, `email`, `firebase_uid`, `matricule`, `roleId
 (10, 'Librarian One', 'librarian@library.edu', NULL, 'LIB-001', 2, 'L1', 'actif', '2025-12-04 23:13:33', '2025-12-04 23:13:33'),
 (11, 'Prof. Martin', 'prof.martin@univ.edu', NULL, 'PROF-001', 4, 'PM', 'actif', '2025-12-04 23:13:33', '2025-12-04 23:13:33'),
 (12, 'User Test', 'test@ugb.edu.sn', 'test123', 'P123', 3, 'UT', 'actif', '2025-12-13 21:55:30', '2025-12-13 21:55:30'),
-(13, 'prénom nom', 'prenom@ugb.edu.sn', 'vWqiLomON1Xbdt3PSBThi9OXWeP2', 'toi', 3, 'PN', 'actif', '2025-12-13 21:59:28', '2025-12-13 21:59:28');
+(16, 'user nom', 'nom@gmail.com', 'QeU5qthFEOYU1Wcte9jLR4IvpUj1', 'n123', 3, 'UN', 'actif', '2025-12-14 16:15:13', '2025-12-14 16:15:13'),
+(17, 'User Admin', 'admin@user.com', '41UfMTB0jHW4vaFNwThZLDwSrz53', 'ad123', 1, 'UA', 'actif', '2025-12-14 23:05:19', '2025-12-14 23:05:19'),
+(18, 'daouda fickou', 'fickou@gmail.com', '2Lee76Z1z9PSI5KojpMvk6tOEss1', 'p31', 3, 'DF', 'actif', '2025-12-15 22:24:38', '2025-12-15 22:24:38'),
+(19, 'Mai Aw', 'ma@gmail.com', 'h0kCY2sqhpbhLr60N60C4pxi9W73', 'ma11', 3, 'MA', 'actif', '2025-12-16 16:12:11', '2025-12-16 16:12:11'),
+(20, 'Die Sall', 'sal@gmail.com', 'iuAhESBzTbW3l3DtFXFkyaJ9J9b2', 'A23', 1, 'DS', 'actif', '2025-12-16 16:14:14', '2025-12-16 16:14:14'),
+(21, 'sow sow', 'sow@gmail.com', 'VsK5mtvZ0TQbhJQvkzzjn8E1lms1', 'sow3', 1, 'SS', 'actif', '2025-12-16 16:17:21', '2025-12-16 16:17:21'),
+(22, 'Aby Sy', 'aby@admin.com', '6dtkjq43hkNWdGeHz2LTxm9AauT2', 'A234', 1, 'AS', 'actif', '2025-12-16 16:20:38', '2025-12-16 16:20:38');
 
 -- --------------------------------------------------------
 
@@ -551,7 +479,7 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT pour la table `books`
 --
 ALTER TABLE `books`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=694978;
 
 --
 -- AUTO_INCREMENT pour la table `categories`
@@ -569,7 +497,7 @@ ALTER TABLE `emprunthistory`
 -- AUTO_INCREMENT pour la table `emprunts`
 --
 ALTER TABLE `emprunts`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2147483648;
 
 --
 -- AUTO_INCREMENT pour la table `notifications`
@@ -581,7 +509,7 @@ ALTER TABLE `notifications`
 -- AUTO_INCREMENT pour la table `reservations`
 --
 ALTER TABLE `reservations`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6953;
 
 --
 -- AUTO_INCREMENT pour la table `roles`
@@ -593,7 +521,7 @@ ALTER TABLE `roles`
 -- AUTO_INCREMENT pour la table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=28;
 
 --
 -- Contraintes pour les tables déchargées

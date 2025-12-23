@@ -694,7 +694,7 @@ class _StudentsPageContentState extends ConsumerState<_StudentsPageContent> {
               const Text(
                 'Emprunts',
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: 10,
                   color: Color(0xFF64748B),
                 ),
               ),
@@ -714,7 +714,7 @@ class _StudentsPageContentState extends ConsumerState<_StudentsPageContent> {
               const Text(
                 'Réservations',
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: 10,
                   color: Color(0xFF64748B),
                 ),
               ),

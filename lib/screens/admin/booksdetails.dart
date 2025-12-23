@@ -363,70 +363,80 @@ class _BookDetailPageState extends State<BookDetailPage> {
                             const SizedBox(height: 24),
                             
                             // Grille d'informations
-                            GridView.count(
-                              crossAxisCount: 2,
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              childAspectRatio: 3,
-                              crossAxisSpacing: 16,
-                              mainAxisSpacing: 12,
+                            Wrap(
+                              spacing: 16,
+                              runSpacing: 12,
                               children: [
-                                _buildInfoItem('ID', book.id),
-                                _buildInfoItem('Catégorie', book.categoryName),
-                                _buildInfoItem('Année', book.year),
-                                _buildInfoItem('Exemplaires', totalCopies.toString()),
+                                _buildInfoItemWrapped('ID', book.id),
+                                _buildInfoItemWrapped('Catégorie', book.categoryName),
+                                _buildInfoItemWrapped('Année', book.year),
+                                _buildInfoItemWrapped('Exemplaires', totalCopies.toString()),
                               ],
                             ),
                             
-                            const SizedBox(height: 24),
+                            const SizedBox(height: 10),
                             
                             // Boutons d'action
-                            Row(
+                            Wrap(
+                              direction: Axis.horizontal,
+                              spacing: 8.0, // Espace horizontal entre les boutons
+                              runSpacing: 0.0, // Espace vertical si les boutons passent à la ligne
                               children: [
+                                // Bouton Modifier
                                 ElevatedButton.icon(
                                   onPressed: _editBook,
-                                  icon: const Icon(Icons.edit, size: 18),
-                                  label: const Text('Modifier'),
+                                  icon: const Icon(Icons.edit, size: 12),
+                                  label: const Text(
+                                    'Modifier',
+                                    style: TextStyle(fontSize: 10),
+                                  ),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: const Color.fromARGB(255, 44, 80, 164),
                                     foregroundColor: Colors.white,
                                     padding: const EdgeInsets.symmetric(
-                                      horizontal: 20,
-                                      vertical: 12,
+                                      horizontal: 10,
+                                      vertical: 5,
                                     ),
                                     shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
+                                      borderRadius: BorderRadius.circular(6),
                                     ),
+                                    minimumSize: const Size(0, 32),
                                   ),
                                 ),
                                 
-                                const SizedBox(width: 12),
-                                
+                                // Bouton Supprimer
                                 ElevatedButton.icon(
                                   onPressed: _isDeleting ? null : _deleteBook,
                                   icon: _isDeleting
                                       ? const SizedBox(
-                                          width: 18,
-                                          height: 18,
+                                          width: 10,
+                                          height: 10,
                                           child: CircularProgressIndicator(
-                                            strokeWidth: 2,
+                                            strokeWidth: 1.5,
                                             color: Colors.white,
                                           ),
                                         )
-                                      : const Icon(Icons.delete, size: 18),
+                                      : const Icon(Icons.delete, size: 12),
                                   label: _isDeleting
-                                      ? const Text('Suppression...')
-                                      : const Text('Supprimer'),
+                                      ? const Text(
+                                          'Suppression...',
+                                          style: TextStyle(fontSize: 10),
+                                        )
+                                      : const Text(
+                                          'Supprimer',
+                                          style: TextStyle(fontSize: 10),
+                                        ),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.red,
                                     foregroundColor: Colors.white,
                                     padding: const EdgeInsets.symmetric(
-                                      horizontal: 20,
-                                      vertical: 12,
+                                      horizontal: 10,
+                                      vertical: 5,
                                     ),
                                     shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
+                                      borderRadius: BorderRadius.circular(6),
                                     ),
+                                    minimumSize: const Size(0, 32),
                                   ),
                                 ),
                               ],
@@ -720,6 +730,33 @@ class _BookDetailPageState extends State<BookDetailPage> {
             icon: Icon(Icons.settings_outlined),
             activeIcon: Icon(Icons.settings),
             label: 'Profil',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoItemWrapped(String label, String value) {
+    return Container(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              color: Color(0xFF64748B),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 12,
+              color: Color(0xFF0F172A),
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ],
       ),

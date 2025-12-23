@@ -1,115 +1,89 @@
-# gestion_bibliotheque
+# Bibliotech - Système de Gestion de Bibliothèque
 
-Application Flutter de gestion d'une bibliothèque — front-end mobile/web.
-
-**Résumé**
-
-Cette application fournit une interface pour consulter le catalogue, gérer les emprunts et réservations, et administrer les utilisateurs et les livres. Le projet utilise Flutter, Riverpod pour la gestion d'état, GoRouter pour la navigation et Firebase pour certains services (configuration partielle fournie).
-
-**Table des matières**
-
-- **Prérequis**
-- **Installation & exécution**
-- **Configuration Firebase & variables d'environnement**
-- **Structure du projet**
-- **Sécurité & bonnes pratiques**
-- **Tests**
-- **Contribution**
-
-## Prérequis
-
-- Flutter (recommandé v3.7+ / SDK compatible avec `environment.sdk` dans `pubspec.yaml`)
-- Dart SDK fourni par Flutter
-- Un backend API (optionnel local : `http://10.0.2.2/library_api/api`) ou URL fournie via `--dart-define`
-- (Optionnel) Projet Firebase si vous voulez utiliser l'authentification, Firestore ou Storage
-
-## Installation & exécution
-
-1. Récupérer les dépendances :
-
-```powershell
-flutter pub get
-```
-
-2. Lancer l'application (émulateur Android par défaut) :
-
-```powershell
-flutter run
-```
-
-3. Pour pointer l'application vers une API différente :
-
-```powershell
-flutter run --dart-define=API_BASE_URL='https://mon-api.example.com/api'
-```
-
-## Configuration Firebase & fichiers sensibles
-
-- Le dépôt contient un fichier `firebase.json` et un exemple de `android/app/google-services.json` mais **les clés sensibles doivent rester en dehors du dépôt**.
-- Remplacez localement `android/app/google-services.json` par celui téléchargé depuis la console Firebase **et ne le commitez pas**.
-- Le projet `.gitignore` exclut par défaut `android/app/google-services.json` et `lib/firebase_options.dart` — conservez cette pratique.
-
-Si vous utilisez Firebase pour l'authentification :
-
-- Configurez l'application Android (package name + SHA-1) et/ou iOS dans la console Firebase.
-- Restreignez la clé API dans Google Cloud Console (restrictions par application) si possible.
-
-## Variables d'environnement et API
-
-- L'URL de l'API peut être fournie au moment du build via `--dart-define=API_BASE_URL`.
-- Exemple pour la build de production :
-
-```powershell
-flutter build apk --dart-define=API_BASE_URL='https://api.production.example.com'
-```
-
-## Structure du projet (rapide)
-
-- `lib/main.dart` : point d'entrée, initialisation Firebase, ProviderScope.
-- `lib/config/` : configuration (routes, api_config).
-- `lib/models/` : modèles de données (`User`, `Book`, ...).
-- `lib/providers/` : providers Riverpod (auth, library, ...).
-- `lib/screens/` : écrans de l'application (login, signup, admin, catalogue, ...).
-- `lib/services/` : services (ex : `ApiService` pour communiquer avec l'API).
-- `lib/components/` & `lib/widgets/` : composants UI réutilisables.
-
-## Sécurité & bonnes pratiques
-
-- Ne jamais committer de clés API, secrets ou fichiers `google-services.json` contenant des clés.
-- Restreindre les clés via la console Google Cloud et définir des règles de sécurité Firestore/Storage.
-- Utiliser `String.fromEnvironment('API_BASE_URL')` (déjà partiellement implémenté) pour séparer environnements.
-- Protéger les routes côté frontend (guards) et côté backend (vérifier les permissions et rôles).
-
-## Tests
-
-- Le projet contient un test widget d'exemple. Il est recommandé d'ajouter :
-	- tests unitaires pour `ApiService` (mock HTTP),
-	- tests pour les providers Riverpod,
-	- tests d'intégration si nécessaire.
-
-Exécuter les tests :
-
-```powershell
-flutter test
-```
-
-## Contribution
-
-- Forkez le dépôt, créez une branche feature/bugfix, puis ouvrez une Pull Request.
-- Respectez les conventions d'analyse (`flutter analyze`) et formatez avec `dart format`.
-
-## Prochaines améliorations suggérées
-
-- Autoriser l'authentification en écoutant `FirebaseAuth.instance.authStateChanges()` via un `StreamProvider` Riverpod.
-- Protéger les routes avec des guards basés sur le rôle utilisateur.
-- Ajouter caching local (`hive` ou `shared_preferences`) pour la résilience offline.
-- Ajouter CI (GitHub Actions) pour `flutter analyze`, `flutter test` et builds.
+**Bibliotech** est une solution numérique intégrée conçue pour moderniser et simplifier la gestion des ressources documentaires au sein d'une institution académique. Il s'agit d'une application multiplateforme permettant une interaction fluide entre les étudiants et le personnel de la bibliothèque.
 
 ---
 
-Si tu veux, je peux :
-- Implémenter le `StreamProvider` pour synchroniser l'état d'authentification,
-- Ajouter un exemple de CI GitHub Actions,
-- Ou rédiger un guide précis pour configurer Firebase en local.
+## 🚀 Fonctionnalités Clés
 
-Dis‑moi quelle action tu souhaites prioriser.
+### Interface Étudiant
+- **Catalogue interactif** : Recherche de livres par titre, auteur ou catégorie.
+- **Réservations** : Réserver des livres en temps réel.
+- **Historique** : Suivi des emprunts actifs et passés.
+- **Profil personnel** : Gestion des informations de compte et du matricule.
+
+### Interface Administrateur / Bibliothécaire
+- **Tableau de Bord** : Statistiques en temps réel sur le stock, les emprunts et les retards.
+- **Gestion du Catalogue (CRUD)** : Ajout, modification et suppression de livres et catégories.
+- **Gestion des Utilisateurs** : Suivi des inscriptions et validation des comptes.
+- **Suivi des Retards** : Identification automatique des retours hors délais avec système de notifications.
+
+---
+
+## 🛠️ Architecture Technique
+
+- **Frontend** : [Flutter](https://flutter.dev) (Dart)
+  - Gestion d'état : `Riverpod`
+  - Navigation : `GoRouter`
+  - Design : `Material 3`
+- **Backend** : PHP (API RESTful)
+- **Base de Données** : MySQL / MariaDB
+- **Authentification** : Firebase Auth
+- **Stockage Cloud** : Firebase Storage (pour les couvertures de livres et avatars)
+
+---
+
+## ⚙️ Configuration et Installation
+
+### 1. Base de Données
+1. Installez un serveur MySQL local (WAMP, XAMPP ou Laragon).
+2. Créez une base de données nommée `bibliotheque_db`.
+3. Importez le fichier SQL de structure : `script/bibliotheque_db.sql`.
+
+### 2. Backend (PHP API)
+1. copier et coller le dossier `library_app` vers votre serveur local (ex : `C:\xampp\htdocs\library_app`).
+2. Configurez la connexion à la base de données dans les fichiers modèles (si nécessaire).
+
+### 3. Frontend (Flutter)
+1. Installez le SDK Flutter.
+2. Dans le dossier racine du projet, lancez :
+   ```bash
+   flutter pub get
+   ```
+3. Configurez l'URL de votre API dans `lib/config/api_url.dart` (ex: `http://localhost/library_app/api/`). Remplacez `localhost` par l'adresse IP de votre serveur.
+
+### 4. Firebase
+Assurez-vous que le fichier `google-services.json` (Android) ou `GoogleService-Info.plist` (iOS) est présent dans les dossiers respectifs pour l'authentification.
+
+---
+
+## 👥 Comptes de Test
+
+Voici les comptes pré-configurés pour tester les différentes interfaces de l'application :
+
+| Rôle | Email | Mot de passe |
+| :--- | :--- | :--- |
+| **Administrateur** | `admin@user.com` | 123456 |
+| **Étudiant** | `fickou@gmail.com` | 123456 |
+
+> [!NOTE]
+> Les données de ces comptes sont déjà présentes dans la base de données MySQL fournie pour assurer la synchronisation avec les UID Firebase.
+
+---
+
+## 📁 Structure du Projet
+
+```text
+gestion_bibliotheque/
+├── lib/               # Code source Flutter (UIs, Providers, Models)
+├── library_app/       # Backend API PHP
+│   └── api/           # Endpoints REST
+├── script/            # Scripts SQL (Database schema)
+├── assets/            # Images et ressources statiques
+└── android/ios/etc.   # Configurations natives
+```
+
+---
+
+## 📝 Auteurs
+Projet développé dans le cadre d'un système de gestion de bibliothèque universitaire.
